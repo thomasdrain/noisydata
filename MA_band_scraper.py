@@ -22,6 +22,9 @@ import datetime
 import requests
 from pandas import DataFrame
 
+from urllib.request import Request, urlopen
+import json
+
 BASEURL = 'http://www.metal-archives.com'
 RELURL = '/browse/ajax-letter/json/1/l/'
 response_len = 500
@@ -36,8 +39,8 @@ def get_url(letter='A', start=0, length=500):
                'iDisplayStart': start,  # set start index of band names returned
                'iDisplayLength': length} # only response lengths of 500 work
     
-    r = requests.get(BASEURL + RELURL + letter, params=payload)
-    
+    #r = requests.get(BASEURL + RELURL + letter, params=payload)
+    r = Request(BASEURL + RELURL + letter, headers={'User-Agent': 'Mozilla/5.0'})
     return r
 
 # Data columns returned in the JSON object
@@ -45,7 +48,7 @@ column_names = ['NameLink', 'Country', 'Genre', 'Status']
 data = DataFrame() # for collecting the results
 
 # Valid inputs for the `letter` parameter of the URL are NBR or A through Z
-letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()[0]
 date_of_scraping = datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
 # Retrieve the data
@@ -54,7 +57,12 @@ for letter in letters:
     # Get total records for given letter & calculate number of chunks
     print('Current letter = ', letter)
     r = get_url(letter=letter, start=0, length=response_len)
-    js = r.json()
+    #print("Response:\n" + str(r))
+    #js = r.json()
+    webpage_json = urlopen(r).read()
+    js = json.load(webpage_json)
+
+    #print("JS: \n" + js)
     n_records = js['iTotalRecords']
     n_chunks = int(n_records / response_len) + 1
     print('Total records = ', n_records)
