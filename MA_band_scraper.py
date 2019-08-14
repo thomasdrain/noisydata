@@ -35,12 +35,14 @@ def get_url(letter='A', start=0, length=500):
     Returns a `Response` object. Data can be accessed by callingt the `json()`
     method of the returned `Response` object."""
     
-    payload = {'sEcho': 0,  # if not set, response text is not valid JSON
+    payload = {
+                'User-Agent': 'Mozilla/5.0', # see https://stackoverflow.com/questions/16627227/http-error-403-in-python-3-web-scraping
+                'sEcho': 0,  # if not set, response text is not valid JSON
                'iDisplayStart': start,  # set start index of band names returned
                'iDisplayLength': length} # only response lengths of 500 work
     
-    #r = requests.get(BASEURL + RELURL + letter, params=payload)
-    r = Request(BASEURL + RELURL + letter, headers={'User-Agent': 'Mozilla/5.0'})
+    r = requests.get(BASEURL + RELURL + letter, params=payload)
+    #r = Request(BASEURL + RELURL + letter, headers=payload)
     return r
 
 # Data columns returned in the JSON object
@@ -56,11 +58,20 @@ for letter in letters:
     
     # Get total records for given letter & calculate number of chunks
     print('Current letter = ', letter)
+
+    # Get response from URL, then convert that response into a JSON string
     r = get_url(letter=letter, start=0, length=response_len)
-    #print("Response:\n" + str(r))
-    #js = r.json()
-    webpage_json = urlopen(r).read()
-    js = json.load(webpage_json)
+    print(r)
+    print(type(r))
+    tmp = r.json()
+    print(tmp)
+    #webpage_json_str = urlopen(r).read().decode("utf-8")
+    #print(webpage_json_str)
+
+    #print(type(webpage_json_str))
+
+    # Decode the string into a JSON object
+    js = json.loads(webpage_json_str)
 
     #print("JS: \n" + js)
     n_records = js['iTotalRecords']
