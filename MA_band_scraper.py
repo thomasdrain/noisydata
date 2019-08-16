@@ -21,8 +21,6 @@ import time
 import datetime
 import requests
 from pandas import DataFrame
-
-from urllib.request import Request, urlopen
 import json
 
 BASEURL = 'http://www.metal-archives.com'
@@ -32,17 +30,17 @@ response_len = 500
 def get_url(letter='A', start=0, length=500):
     """Gets the listings displayed as alphabetical tables on M-A for input
     `letter`, starting at `start` and ending at `start` + `length`.
-    Returns a `Response` object. Data can be accessed by callingt the `json()`
+    Returns a `Response` object. Data can be accessed by calling the `json()`
     method of the returned `Response` object."""
-    
-    payload = {
-                'User-Agent': 'Mozilla/5.0', # see https://stackoverflow.com/questions/16627227/http-error-403-in-python-3-web-scraping
-                'sEcho': 0,  # if not set, response text is not valid JSON
+
+    payload = {'sEcho': 0,  # if not set, response text is not valid JSON
                'iDisplayStart': start,  # set start index of band names returned
                'iDisplayLength': length} # only response lengths of 500 work
-    
-    r = requests.get(BASEURL + RELURL + letter, params=payload)
-    #r = Request(BASEURL + RELURL + letter, headers=payload)
+
+    # see https://stackoverflow.com/questions/16627227/http-error-403-in-python-3-web-scraping
+    header = {'User-Agent': 'Mozilla/5.0'}
+
+    r = requests.get(BASEURL + RELURL + letter, params=payload, headers = header)
     return r
 
 # Data columns returned in the JSON object
@@ -50,7 +48,7 @@ column_names = ['NameLink', 'Country', 'Genre', 'Status']
 data = DataFrame() # for collecting the results
 
 # Valid inputs for the `letter` parameter of the URL are NBR or A through Z
-letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()[0]
+letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 date_of_scraping = datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
 # Retrieve the data
@@ -61,19 +59,8 @@ for letter in letters:
 
     # Get response from URL, then convert that response into a JSON string
     r = get_url(letter=letter, start=0, length=response_len)
-    print(r)
-    print(type(r))
-    tmp = r.json()
-    print(tmp)
-    #webpage_json_str = urlopen(r).read().decode("utf-8")
-    #print(webpage_json_str)
+    js = r.json()
 
-    #print(type(webpage_json_str))
-
-    # Decode the string into a JSON object
-    js = json.loads(webpage_json_str)
-
-    #print("JS: \n" + js)
     n_records = js['iTotalRecords']
     n_chunks = int(n_records / response_len) + 1
     print('Total records = ', n_records)
@@ -96,7 +83,7 @@ for letter in letters:
                 df = DataFrame(js['aaData'])
                 data = data.append(df)
             # If the response fails, r.json() will raise an exception, so retry 
-            except JSONDecodeError:
+            except ValueError:
                 print('JSONDecodeError on attempt ', attempt, ' of 10.')
                 print('Retrying...')
                 continue
