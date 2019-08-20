@@ -1,4 +1,3 @@
-# Ignore all except python (and this .gitignore)
-*
-!.gitignore
-!*.py
+# Ignore these subdirectories:
+venv/
+.idea/
