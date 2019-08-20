@@ -26,7 +26,7 @@ import json
 BASEURL = 'http://www.metal-archives.com'
 RELURL = '/browse/ajax-letter/json/1/l/'
 response_len = 500
-print('some text.....')
+
 def get_url(letter='A', start=0, length=500):
     """Gets the listings displayed as alphabetical tables on M-A for input
     `letter`, starting at `start` and ending at `start` + `length`.
