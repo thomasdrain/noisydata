@@ -19,9 +19,9 @@
 
 import time
 import datetime
-import requests
 from bs4 import BeautifulSoup
 from pandas import DataFrame
+import get_url as gu
 
 
 BASE_URL = 'http://www.metal-archives.com'
@@ -35,19 +35,23 @@ URL_SUFFIX = '/json/1'
 response_len = 200
 encoding = 'UTF-8'
 
-def get_url(letter='A', start=0, length=200):
+
+def get_review_url(letter='A', start=0, length=200):
     """Gets the review listings displayed as alphabetical tables on M-A for
     input `letter`, starting at `start` and ending at `start` + `length`.
     Returns a `Response` object. Data can be accessed by calling the `json()`
     method of the returned `Response` object."""
 
-    payload = {'sEcho': 1,
-               'iColumns': 7,
-               'iDisplayStart': start,
-               'iDisplayLength': length}
-    
-    r = requests.get(BASE_URL + URL_EXT_ALPHA + letter + URL_SUFFIX,
-                     params=payload)
+    review_url = BASE_URL + URL_EXT_ALPHA + letter + URL_SUFFIX
+    # OR USE THIS
+    #review_url = BASE_URL + URL_EXT_DATE + date + URL_SUFFIX
+
+    review_payload = {'sEcho': 1,
+                      'iColumns': 7,
+                      'iDisplayStart': start,
+                      'iDisplayLength': length}
+
+    r = gu.get_url(review_url, payload = review_payload)
 
     return r
 
@@ -58,10 +62,11 @@ date_col_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
                   'Score', 'UserLink', 'Time']
 
 # Valid letter entries for alphabetical listing
-letters = 'nbr A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+#letters = 'nbr A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+letters = 'Z'
 
 # Valid date example for by-date listing (YYYY-MM)
-date = '2016-04'
+date = '2019-08'
 
 data = DataFrame()
 
@@ -75,18 +80,19 @@ date_of_scraping = datetime.datetime.utcnow().strftime('%Y-%m-%d')
 # These are not set to their full ranges because it will take a long time
 # to download all of the reviews and I don't know how the traffic it generates
 # will impact the Metal Archives site.
-for letter in ['A']:
+for letter in letters:
 
     # Get total records for a given letter & calculate number of chunks
     print('Current letter = ', letter)
-    r = get_url(letter=letter, start=0, length=response_len)
+    r = get_review_url(letter=letter, start=0, length=response_len)
     js = r.json()
     n_records = js['iTotalRecords']
     n_chunks = int(n_records / response_len) + 1
     print('Total records = ', n_records)
 
     # Retrieve chunks
-    for i in range(1):
+    for i in range(n_chunks):
+    #for i in range(1):
         start = response_len * i
         if start + response_len < n_records:
             end = start + response_len
@@ -97,7 +103,7 @@ for letter in ['A']:
         for attempt in range(10):
             time.sleep(3) # Obeying their robots.txt "Crawl-delay: 3"
             try:
-                r = get_url(letter=letter, start=start, length=response_len)
+                r = get_review_url(letter=letter, start=start, length=response_len)
                 r.encoding = encoding
                 js = r.json()
                 # Store response
@@ -117,7 +123,7 @@ for letter in ['A']:
             time.sleep(3)
             print('Review #', n+1)
             linksoup = BeautifulSoup(link, 'html.parser')
-            review_page = requests.get(linksoup.a['href'])
+            review_page = gu.get_url(linksoup.a['href'])
             review_page.encoding = encoding
             review_soup = BeautifulSoup(review_page.text, 'html.parser')
             review_title = review_soup.find_all('h3')[0].text.strip()[:-6]
@@ -128,8 +134,7 @@ for letter in ['A']:
         # Store review data & save to disk
         df['ReviewTitle'] = review_titles
         df['ReviewContent'] = reviews
-        f_name = 'MA-reviews_{}_{}{:03d}.csv'.format(date_of_scraping, letter, i)
-        f_name = 'MA-reviews_' + date_of_scraping + '_' + letter + '%03d' % i + '.csv'
+        f_name = 'data/MA-reviews_' + date_of_scraping + '_' + letter + '%03d' % i + '.csv'
         print('Writing chunk to csv file:', f_name)
         df.to_csv(f_name)
 
