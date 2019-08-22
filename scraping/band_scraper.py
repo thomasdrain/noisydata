@@ -97,7 +97,7 @@ data.columns = column_names
 data.index = range(len(data))
 
 # Save to CSV
-f_name = 'MA-band-names_{}.csv'.format(date_of_scraping)
+f_name = 'data/MA-band-names_{}.csv'.format(date_of_scraping)
 print('Writing band data to csv file:', f_name)
 data.to_csv(f_name)
 print('Complete!')
