@@ -23,34 +23,27 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from pandas import DataFrame
 import get_url as gu
+import scrape_MA as sma
 
-
-BASE_URL = 'http://www.metal-archives.com'
 
 # for reviews alphabetically
-URL_EXT_ALPHA = '/review/ajax-list-browse/by/alpha/selection/'
-# for reviews by date
-URL_EXT_DATE = '/review/ajax-list-browse/by/date/selection/'
+#URL_EXT_ALPHA = '/review/ajax-list-browse/by/alpha/selection/'
 
-URL_SUFFIX = '/json/1'
-response_len = 200
-encoding = 'UTF-8'
-
-
+#@scraping_sequence
 def get_review_url(date = "2019-01", start=0, length=200):
     """Gets the review listings displayed as alphabetical tables on M-A for
     input `letter`, starting at `start` and ending at `start` + `length`.
     Returns a `Response` object. Data can be accessed by calling the `json()`
     method of the returned `Response` object."""
 
-    review_url = BASE_URL + URL_EXT_DATE + date + URL_SUFFIX
-    # OR USE THIS
-    # review_url = BASE_URL + URL_EXT_ALPHA + letter + URL_SUFFIX
+    review_url = 'http://www.metal-archives.com/review/ajax-list-browse/by/date/selection/' + date + '/json/1'
 
     review_payload = {'sEcho': 1,
                       'iColumns': 7,
                       'iDisplayStart': start,
                       'iDisplayLength': length}
+    if start == 0:
+        print('Current month = ', date)
 
     r = gu.get_url(review_url, payload = review_payload)
 
@@ -62,77 +55,51 @@ def get_review_url(date = "2019-01", start=0, length=200):
 date_col_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
                   'Score', 'UserLink', 'Time']
 
-# Valid letter entries for alphabetical listing
-#letters = 'nbr A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
-#letters = 'Z'
-
 # start_date being the start of the reverse sequence of dates (excludes current month)
-today_date = datetime.datetime.utcnow().strftime('%Y-%m-%d')
-
+#today_date = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+today_date = '2019-06'
 # Sequence of months we're going to scrape (going from most to least recent)
 # Note: valid dates for review by-date listing are in YYYY-MM format
-dates = pd.date_range(end = today_date, periods = 2, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
+#dates = pd.date_range(end = today_date, periods = 4, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
+dates = pd.date_range(start = '2002-07', end = '2002-08', freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
 
-data = DataFrame()
+response_len = 200
 
-# Retrieve the review listings
-# Get the reviews by month (in reverse order)
+# For each month in our sequence, scrape all the reviews
 for date in dates:
 
-    # Get total records for a given date & calculate number of chunks
-    print('Current month = ', date)
-    r = get_review_url(date=date, start=0, length=response_len)
-    js = r.json()
-    n_records = js['iTotalRecords']
-    n_chunks = int(n_records / response_len) + 1
-    print('Total records = ', n_records)
+    raw = sma.scrape_MA(date, get_review_url, response_len)
 
-    # Retrieve chunks
-    for i in range(n_chunks):
-        start = response_len * i
-        if start + response_len < n_records:
-            end = start + response_len
-        else:
-            end = n_records
-        print('Fetching review entries', start, 'to', end)
+    clean = raw
+    # Set informative names
+    clean.columns = date_col_names
 
-        for attempt in range(10):
-            time.sleep(3) # Obeying their robots.txt "Crawl-delay: 3"
-            try:
-                r = get_review_url(date=date, start=start, length=response_len)
-                r.encoding = encoding
-                js = r.json()
-                # Store response
-                df = DataFrame(js['aaData'], columns=date_col_names)
-            # If the response fails, r.json() will raise an exception, so retry
-            except JSONDecodeError:
-                print('JSONDecodeError on attempt ', attempt, ' of 10.')
-                print('Retrying...')
-                continue
-            break
+    # Fetch review title and content
+    review_titles = []
+    reviews = []
 
-        # Fetch review title and content
-        review_titles = []
-        reviews = []
-        print('Fetching review content...')
-        for n, link in enumerate(df['ReviewLink']):
-            time.sleep(3)
-            print('Review #', n+1)
-            linksoup = BeautifulSoup(link, 'html.parser')
-            review_page = gu.get_url(linksoup.a['href'])
-            review_page.encoding = encoding
-            review_soup = BeautifulSoup(review_page.text, 'html.parser')
-            review_title = review_soup.find_all('h3')[0].text.strip()[:-6]
-            review_titles.append(review_title)
-            review = review_soup.find_all('div', {'class': 'reviewContent'})[0].text
-            reviews.append(review)
+    # Go into each review record, access the URL and get the review text itself
+    print('Fetching review content...')
+    for n, link in enumerate(clean['ReviewLink']):
+        time.sleep(3)
+        print('Review #', n+1)
+        linksoup = BeautifulSoup(link, 'html.parser')
+        review_page = gu.get_url(linksoup.a['href'])
+        review_page.encoding = 'UTF-8'
+        review_soup = BeautifulSoup(review_page.text, 'html.parser')
+        review_title = review_soup.find_all('h3')[0].text.strip()[:-6]
+        review_titles.append(review_title)
+        review = review_soup.find_all('div', {'class': 'reviewContent'})[0].text
+        reviews.append(review)
 
-        # Store review data & save to disk
-        df['ReviewTitle'] = review_titles
-        df['ReviewContent'] = reviews
-        df['DateScraped'] = today_date
-        f_name = 'data/MA-reviews_' + date + '_' + '%03d' % i + '.csv'
-        print('Writing chunk to csv file:', f_name)
-        df.to_csv(f_name)
+    # Store review data & save to disk
+    clean['ReviewTitle'] = review_titles
+    clean['ReviewContent'] = reviews
+    clean['DateScraped'] = today_date
+
+    date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
+    f_name = 'data/MA-reviews_{}_{}.csv'.format(date, date_of_scraping)
+    print('Writing reviews to csv file:', f_name)
+    clean.to_csv(f_name)
 
 print('Complete!')

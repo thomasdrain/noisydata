@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+
+# ! /usr/bin/env python
 #
 # Script for scraping band names and basic associated information from
 # http://www.metal-archives.com
@@ -19,85 +20,50 @@
 
 import time
 import datetime
-import requests
-from pandas import DataFrame
-import json
+import scrape_MA as sma
+import get_url as gu
 
-BASEURL = 'http://www.metal-archives.com'
-RELURL = '/browse/ajax-letter/json/1/l/'
-response_len = 500
-
-def get_url(letter='A', start=0, length=500):
+def get_band_url(letter='A', start=0, length=500):
     """Gets the listings displayed as alphabetical tables on M-A for input
     `letter`, starting at `start` and ending at `start` + `length`.
     Returns a `Response` object. Data can be accessed by calling the `json()`
     method of the returned `Response` object."""
 
-    payload = {'sEcho': 0,  # if not set, response text is not valid JSON
-               'iDisplayStart': start,  # set start index of band names returned
-               'iDisplayLength': length} # only response lengths of 500 work
+    band_url = 'http://www.metal-archives.com/browse/ajax-letter/json/1/l/' + letter
 
-    # see https://stackoverflow.com/questions/16627227/http-error-403-in-python-3-web-scraping
-    header = {'User-Agent': 'Mozilla/5.0'}
+    band_payload = {'sEcho': 0,  # if not set, response text is not valid JSON
+                    'iDisplayStart': start,  # set start index of band names returned
+                    'iDisplayLength': length} # only response lengths of 500 work
+    if start == 0:
+        print('Current letter = ', letter)
 
-    r = requests.get(BASEURL + RELURL + letter, params=payload, headers = header)
+    r = gu.get_url(band_url, payload = band_payload)
     return r
+
 
 # Data columns returned in the JSON object
 column_names = ['NameLink', 'Country', 'Genre', 'Status']
-data = DataFrame() # for collecting the results
+response_len = 500
 
 # Valid inputs for the `letter` parameter of the URL are NBR or A through Z
 letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
-date_of_scraping = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+letters = 'Z'
 
-# Retrieve the data
 for letter in letters:
-    
-    # Get total records for given letter & calculate number of chunks
-    print('Current letter = ', letter)
+    raw = sma.scrape_MA(letter, get_band_url, response_len)
 
-    # Get response from URL, then convert that response into a JSON string
-    r = get_url(letter=letter, start=0, length=response_len)
-    js = r.json()
+    clean = raw
+    # Set informative names
+    clean.columns = column_names
 
-    n_records = js['iTotalRecords']
-    n_chunks = int(n_records / response_len) + 1
-    print('Total records = ', n_records)
+    # Current index corresponds to index in smaller chunks concatenated
+    # Reset index to start at 0 and end at number of bands
+    clean.index = range(len(clean))
 
-    # Retrieve chunks
-    for i in range(n_chunks):
-        start = response_len * i
-        if start + response_len < n_records:
-            end = start + response_len
-        else:
-            end = n_records
-        print('Fetching band entries ', start, 'to ', end)
-        
-        for attempt in range(10):
-            time.sleep(3) # Obeying their robots.txt "Crawl-delay: 3"
-            try:
-                r = get_url(letter=letter, start=start, length=response_len)
-                js = r.json()
-                # Store response
-                df = DataFrame(js['aaData'])
-                data = data.append(df)
-            # If the response fails, r.json() will raise an exception, so retry 
-            except ValueError:
-                print('JSONDecodeError on attempt ', attempt, ' of 10.')
-                print('Retrying...')
-                continue
-            break
+    # Save to CSV
+    date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
+    f_name = 'data/MA-band-names_{}_{}.csv'.format(letter, date_of_scraping)
+    print('Writing band data to csv file:', f_name)
+    clean.to_csv(f_name)
 
-# Set informative names
-data.columns = column_names
-
-# Current index corresponds to index in smaller chunks concatenated
-# Reset index to start at 0 and end at number of bands
-data.index = range(len(data))
-
-# Save to CSV
-f_name = 'data/MA-band-names_{}.csv'.format(date_of_scraping)
-print('Writing band data to csv file:', f_name)
-data.to_csv(f_name)
 print('Complete!')
