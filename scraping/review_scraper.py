@@ -12,7 +12,7 @@
 # Determine how many requests of 200 entries are required, issue requests
 # Read JSON in the `Requests` object returned by `get_url` using `r.json()`
 # Read contents in 'aaData' key into a pandas `DataFrame`
-# Set column names to `alpha_col_names`
+# Set column names to `date_col_names`
 # For each link in the list of reviews, visit link and extract the title
 # of the review and the content of the review
 # Save chunk of reviews to csv file
@@ -20,6 +20,7 @@
 import time
 import datetime
 from bs4 import BeautifulSoup
+import pandas as pd
 from pandas import DataFrame
 import get_url as gu
 
@@ -36,15 +37,15 @@ response_len = 200
 encoding = 'UTF-8'
 
 
-def get_review_url(letter='A', start=0, length=200):
+def get_review_url(date = "2019-01", start=0, length=200):
     """Gets the review listings displayed as alphabetical tables on M-A for
     input `letter`, starting at `start` and ending at `start` + `length`.
     Returns a `Response` object. Data can be accessed by calling the `json()`
     method of the returned `Response` object."""
 
-    review_url = BASE_URL + URL_EXT_ALPHA + letter + URL_SUFFIX
+    review_url = BASE_URL + URL_EXT_DATE + date + URL_SUFFIX
     # OR USE THIS
-    #review_url = BASE_URL + URL_EXT_DATE + date + URL_SUFFIX
+    # review_url = BASE_URL + URL_EXT_ALPHA + letter + URL_SUFFIX
 
     review_payload = {'sEcho': 1,
                       'iColumns': 7,
@@ -56,35 +57,31 @@ def get_review_url(letter='A', start=0, length=200):
     return r
 
 # Data columns in the returned JSON
-alpha_col_names = ['BandName', 'ReviewLink', 'BandLink', 'AlbumLink',
-                   'Score', 'UserLink', 'Date']
+#alpha_col_names = ['BandName', 'ReviewLink', 'BandLink', 'AlbumLink',
+#                   'Score', 'UserLink', 'Date']
 date_col_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
                   'Score', 'UserLink', 'Time']
 
 # Valid letter entries for alphabetical listing
 #letters = 'nbr A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
-letters = 'Z'
+#letters = 'Z'
 
-# Valid date example for by-date listing (YYYY-MM)
-date = '2019-08'
+# start_date being the start of the reverse sequence of dates (excludes current month)
+today_date = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+
+# Sequence of months we're going to scrape (going from most to least recent)
+# Note: valid dates for review by-date listing are in YYYY-MM format
+dates = pd.date_range(end = today_date, periods = 2, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
 
 data = DataFrame()
 
-date_of_scraping = datetime.datetime.utcnow().strftime('%Y-%m-%d')
-
 # Retrieve the review listings
-# Change this to determine the reviews you want to download.
-# Letter corresponds to the first letter in the band name.
-# Also change `for i in range(1)` to `for i in range(n_chunks) to download
-# all reviews for a specific letter
-# These are not set to their full ranges because it will take a long time
-# to download all of the reviews and I don't know how the traffic it generates
-# will impact the Metal Archives site.
-for letter in letters:
+# Get the reviews by month (in reverse order)
+for date in dates:
 
-    # Get total records for a given letter & calculate number of chunks
-    print('Current letter = ', letter)
-    r = get_review_url(letter=letter, start=0, length=response_len)
+    # Get total records for a given date & calculate number of chunks
+    print('Current month = ', date)
+    r = get_review_url(date=date, start=0, length=response_len)
     js = r.json()
     n_records = js['iTotalRecords']
     n_chunks = int(n_records / response_len) + 1
@@ -92,22 +89,21 @@ for letter in letters:
 
     # Retrieve chunks
     for i in range(n_chunks):
-    #for i in range(1):
         start = response_len * i
         if start + response_len < n_records:
             end = start + response_len
         else:
             end = n_records
-        print('Fetching review entries', start, 'to ', end)
+        print('Fetching review entries', start, 'to', end)
 
         for attempt in range(10):
             time.sleep(3) # Obeying their robots.txt "Crawl-delay: 3"
             try:
-                r = get_review_url(letter=letter, start=start, length=response_len)
+                r = get_review_url(date=date, start=start, length=response_len)
                 r.encoding = encoding
                 js = r.json()
                 # Store response
-                df = DataFrame(js['aaData'], columns=alpha_col_names)
+                df = DataFrame(js['aaData'], columns=date_col_names)
             # If the response fails, r.json() will raise an exception, so retry
             except JSONDecodeError:
                 print('JSONDecodeError on attempt ', attempt, ' of 10.')
@@ -134,7 +130,8 @@ for letter in letters:
         # Store review data & save to disk
         df['ReviewTitle'] = review_titles
         df['ReviewContent'] = reviews
-        f_name = 'data/MA-reviews_' + date_of_scraping + '_' + letter + '%03d' % i + '.csv'
+        df['DateScraped'] = today_date
+        f_name = 'data/MA-reviews_' + date + '_' + '%03d' % i + '.csv'
         print('Writing chunk to csv file:', f_name)
         df.to_csv(f_name)
 
