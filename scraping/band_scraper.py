@@ -37,8 +37,8 @@ date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
 # Columns in the returned JSON
 column_names = ['NameLink', 'Country', 'Genre', 'Status']
 
-# Valid inputs for the `letter` parameter of the URL are NBR or A through Z
-letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+# Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
+letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 letters = 'Z'
 
 for letter in letters:
