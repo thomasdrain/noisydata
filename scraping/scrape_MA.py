@@ -1,20 +1,21 @@
 
-# Author: Thomas Drain, Jon Charest (http://github.com/jonchar
+# Author: Thomas Drain, Jon Charest
+# Year: 2019
 
 # General purpose loop for scraping metal-archives.com,
 # flexible in which kind of data able to be scraped (e.g. bands, reviews)
 
 # Approach:
-# For each item in a sequence (e.g. bands, reviews)
-# Read number of entries for given item using result from `get_func`
-# Determine how many requests of 500 entries are required, issue requests
-# Read JSON in the `Requests` object returned by `get_url` using `r.json()`
-# Read contents in 'aaData' key into a pandas `DataFrame`
-# Return raw results
+# Using the supplied scraper function, call the url of the supplied url
+# Determine how many requests are required, then issue requests
+# Read JSON object
+# Read contents in 'aaData' key and put into a pandas `DataFrame`
+# Return raw results after all requests have been made
 
 import json
 import time
 from pandas import DataFrame
+
 
 def scrape_MA(element, get_func, response_len = 500):
 

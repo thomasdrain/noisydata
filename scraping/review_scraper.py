@@ -1,40 +1,29 @@
-#! /usr/bin/env python
-#
-# Script for scraping album reviews and associated information from
-# http://www.metal-archives.com
-#
-# Author: Jon Charest (http://github.com/jonchar)
-# Year: 2016
-#
+# Author: Thomas Drain, Jon Charest
+# Year: 2019
+
+# Script for scraping album reviews and associated information from metal-archives.com
+
 # Approach:
-# For each {nbr, A-Z}
-# Read number of entries for given letter using result from `get_url`
-# Determine how many requests of 200 entries are required, issue requests
-# Read JSON in the `Requests` object returned by `get_url` using `r.json()`
-# Read contents in 'aaData' key into a pandas `DataFrame`
-# Set column names to `date_col_names`
-# For each link in the list of reviews, visit link and extract the title
-# of the review and the content of the review
-# Save chunk of reviews to csv file
+# For each month in a sequence (reviews must be requested in monthly chunks),
+# call the scrape_MA() function which returns the review table data,
+# then go into each review and extract the text itself.
+# Finally save to CSV.
 
 import time
 import datetime
 from bs4 import BeautifulSoup
 import pandas as pd
-from pandas import DataFrame
 import get_url as gu
 import scrape_MA as sma
 
 
-# for reviews alphabetically
-#URL_EXT_ALPHA = '/review/ajax-list-browse/by/alpha/selection/'
-
-#@scraping_sequence
 def get_review_url(date = "2019-01", start=0, length=200):
-    """Gets the review listings displayed as alphabetical tables on M-A for
-    input `letter`, starting at `start` and ending at `start` + `length`.
+    """Gets the review listings displayed as monthly tables on M-A for
+    input `date`, starting at `start` and ending at `start` + `length`.
     Returns a `Response` object. Data can be accessed by calling the `json()`
-    method of the returned `Response` object."""
+    method of the returned `Response` object.
+    Note: this can be done alphabetically, however to minimise calls I've
+    used the monthly tables"""
 
     review_url = 'http://www.metal-archives.com/review/ajax-list-browse/by/date/selection/' + date + '/json/1'
 
@@ -49,29 +38,27 @@ def get_review_url(date = "2019-01", start=0, length=200):
 
     return r
 
-# Data columns in the returned JSON
-#alpha_col_names = ['BandName', 'ReviewLink', 'BandLink', 'AlbumLink',
-#                   'Score', 'UserLink', 'Date']
-date_col_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
-                  'Score', 'UserLink', 'Time']
 
-# start_date being the start of the reverse sequence of dates (excludes current month)
-#today_date = datetime.datetime.utcnow().strftime('%Y-%m-%d')
-today_date = '2019-06'
 # Sequence of months we're going to scrape (going from most to least recent)
 # Note: valid dates for review by-date listing are in YYYY-MM format
-#dates = pd.date_range(end = today_date, periods = 4, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
+#start_date = '2019-06'
+#dates = pd.date_range(end = start_date, periods = 4, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
 dates = pd.date_range(start = '2002-07', end = '2002-08', freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
 
 response_len = 200
+date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
 
-# For each month in our sequence, scrape all the reviews
+# Columns in the returned JSON
+# (for date scraping - see earlier code iterations for the alpha table column names)
+date_col_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
+                  'Score', 'UserLink', 'Time']
+
+# Scrape all the reviews for each month in the sequence
 for date in dates:
 
     raw = sma.scrape_MA(date, get_review_url, response_len)
 
     clean = raw
-    # Set informative names
     clean.columns = date_col_names
 
     # Fetch review title and content
@@ -95,9 +82,8 @@ for date in dates:
     # Store review data & save to disk
     clean['ReviewTitle'] = review_titles
     clean['ReviewContent'] = reviews
-    clean['DateScraped'] = today_date
+    clean['DateScraped'] = date_of_scraping
 
-    date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
     f_name = 'data/MA-reviews_{}_{}.csv'.format(date, date_of_scraping)
     print('Writing reviews to csv file:', f_name)
     clean.to_csv(f_name)

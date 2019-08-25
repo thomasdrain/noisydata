@@ -1,27 +1,17 @@
+# Author: Thomas Drain, Jon Charest
+# Year: 2019
 
-# ! /usr/bin/env python
-#
-# Script for scraping band names and basic associated information from
-# http://www.metal-archives.com
-#
-# Author: Jon Charest (http://github.com/jonchar
-# Year: 2016
-#
+# Script for scraping bands and associated information from metal-archives.com
+
 # Approach:
-# For each {NBR, A-Z}
-# Read number of entries for given letter using result from `get_url`
-# Determine how many requests of 500 entries are required, issue requests
-# Read JSON in the `Requests` object returned by `get_url` using `r.json()`
-# Read contents in 'aaData' key into a pandas `DataFrame`
-# Set column names to `column_names`
-# Clean up columns
-# Concatenate & store outputs in a DataFrame
-# Save final DataFrame to csv
+# For each letter in the alphabet (including 'NBR'),
+# call the scrape_MA() function which returns the review table data,
+# then save to CSV.
 
-import time
 import datetime
 import scrape_MA as sma
 import get_url as gu
+
 
 def get_band_url(letter='A', start=0, length=500):
     """Gets the listings displayed as alphabetical tables on M-A for input
@@ -41,9 +31,11 @@ def get_band_url(letter='A', start=0, length=500):
     return r
 
 
-# Data columns returned in the JSON object
-column_names = ['NameLink', 'Country', 'Genre', 'Status']
 response_len = 500
+date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
+
+# Columns in the returned JSON
+column_names = ['NameLink', 'Country', 'Genre', 'Status']
 
 # Valid inputs for the `letter` parameter of the URL are NBR or A through Z
 letters = 'NBR A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
@@ -59,9 +51,10 @@ for letter in letters:
     # Current index corresponds to index in smaller chunks concatenated
     # Reset index to start at 0 and end at number of bands
     clean.index = range(len(clean))
+    clean['DateScraped'] = date_of_scraping
 
     # Save to CSV
-    date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
+    date_of_scraping = datetime.datetime.utcnow().strftime('%d%m%Y')
     f_name = 'data/MA-band-names_{}_{}.csv'.format(letter, date_of_scraping)
     print('Writing band data to csv file:', f_name)
     clean.to_csv(f_name)
