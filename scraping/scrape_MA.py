@@ -13,6 +13,7 @@
 # Return raw results after all requests have been made
 
 import json
+import datetime
 import time
 from pandas import DataFrame
 
@@ -48,7 +49,9 @@ def scrape_MA(element, get_func, response_len = 500):
                     js = r.json()
                 # Store response
                 df = DataFrame(js['aaData'])
+                df['Scraped'] = datetime.datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')
                 res = res.append(df)
+
             # If the response fails, r.json() will raise an exception, so retry
             except ValueError:
                 print('JSONDecodeError on attempt ', attempt, ' of 10.')
