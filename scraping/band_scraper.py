@@ -8,7 +8,10 @@
 # call the scrape_MA() function which returns the review table data,
 # then save to CSV.
 
+from bs4 import BeautifulSoup
 import datetime
+import pandas as pd
+import re
 import scrape_MA as sma
 import get_url as gu
 
@@ -32,29 +35,36 @@ def get_band_url(letter='A', start=0, length=500):
 
 
 response_len = 500
-date_of_scraping = datetime.datetime.utcnow().strftime('%d%M%Y')
+date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
 
-# Columns in the returned JSON
-column_names = ['NameLink', 'Country', 'Genre', 'Status']
+# Columns in the returned raw data
+column_names = ['NameLink', 'Country', 'Genre', 'Status', 'Scraped']
 
 # Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
-letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+#letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 letters = 'Z'
 
 for letter in letters:
     raw = sma.scrape_MA(letter, get_band_url, response_len)
 
-    clean = raw
     # Set informative names
-    clean.columns = column_names
+    raw.columns = column_names
 
+    namesoup = [BeautifulSoup(text, 'html.parser') for text in raw['NameLink']]
+
+    raw['BandLink'] = [soup.a['href'] for soup in namesoup]
+    raw['BandID'] = [re.sub(".+/(.+)$", "\\1", link) for link in raw['BandLink']]
+    raw['BandName'] = [soup.a.string for soup in namesoup]
+
+    statussoup = [BeautifulSoup(text, 'html.parser') for text in raw['Status']]
+    raw['BandStatus'] = [soup.span.string for soup in statussoup]
+
+    clean = raw[['BandID', 'BandName', 'BandLink', 'BandStatus', 'Country', 'Genre', 'Scraped']]
     # Current index corresponds to index in smaller chunks concatenated
     # Reset index to start at 0 and end at number of bands
     clean.index = range(len(clean))
-    clean['DateScraped'] = date_of_scraping
 
     # Save to CSV
-    date_of_scraping = datetime.datetime.utcnow().strftime('%d%m%Y')
     f_name = 'data/MA-band-names_{}_{}.csv'.format(letter, date_of_scraping)
     print('Writing band data to csv file:', f_name)
     clean.to_csv(f_name)
