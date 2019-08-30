@@ -34,6 +34,40 @@ def get_band_url(letter='A', start=0, length=500):
     return r
 
 
+def get_album_url(band_id = '125'):
+    discog_url = 'https://www.metal-archives.com/band/discography/id/' + band_id + '/tab/all'
+    r = gu.get_url(discog_url)
+
+    soup = BeautifulSoup(r.text, 'html.parser')
+    table = soup.find('table')  # Grab the first table
+    albums = table.find_all('tr')
+    new_table = pd.DataFrame(data = '', columns = ['Band ID', 'Name', 'Type', 'Year', 'Reviews', 'Rating'],
+                             index = range(0, len(albums) - 1))
+
+    new_table[new_table.columns[0]] = band_id
+
+    album_marker = 0
+    for album in albums[1:]: # we can ignore the header row
+        column_marker = 1 # start appending data from col 1, after band ID
+        columns = album.find_all('td')
+        for column in columns:
+            new_table.iat[album_marker, column_marker] = column.get_text().strip()
+            column_marker += 1
+
+        # If there's at least one review, the <td> will have the form '2 (67%)',
+        # which denote the number of reviews and average rating
+        tmp_review_col = new_table.iat[album_marker, 4]
+        if tmp_review_col != '':
+            new_table.iat[album_marker, 4] = re.sub("(\\d+) \\(\\d+%\\)*$", "\\1", tmp_review_col)
+            new_table.iat[album_marker, 5] = re.sub("\\d+ \\((\\d+%)\\)*$", "\\1", tmp_review_col)
+
+        album_marker += 1
+
+    return new_table
+    #return table
+
+get_album_url().to_csv("data/album_tmp.csv")
+
 response_len = 500
 date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
 
@@ -47,6 +81,7 @@ letters = 'Z'
 for letter in letters:
     raw = sma.scrape_MA(letter, get_band_url, response_len)
 
+    # PUT ALL THIS IN TIDY() FUNCTION
     # Set informative names
     raw.columns = column_names
 
@@ -69,4 +104,5 @@ for letter in letters:
     print('Writing band data to csv file:', f_name)
     clean.to_csv(f_name)
 
+    # PUT FOR LOOP HERE TO GET ALBUMS; WRITE NEW FUNCTION LIKE SCRAPE_MA WHICH INCLUDES SLEEP TIMES ETC??
 print('Complete!')
