@@ -18,7 +18,7 @@ import time
 from pandas import DataFrame
 
 
-def scrape_MA(element, get_func, response_len = 500):
+def scrape_metalarchives(element, get_func, response_len = 500):
 
     res = DataFrame()  # for collecting the results
 
