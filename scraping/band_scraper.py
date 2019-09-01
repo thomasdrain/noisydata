@@ -9,14 +9,13 @@
 # then save to CSV.
 
 import datetime
-import get_band as gb
-import scrape_metalarchives as sma
-from scraping import tidy_album as ta
-import tidy_band as tb
+from scraping import get_band
+from scraping import scrape_metalarchives
+from scraping import tidy_album
+from scraping import tidy_band
 
 
-
-#get_album_url().to_csv("data/album_tmp.csv")
+#get_album().to_csv("data/album_tmp.csv")
 
 response_len = 500
 date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
@@ -30,13 +29,13 @@ letters = 'Z'
 
 for letter in letters:
     # SCRAPE BANDS
-    bands_raw = sma.scrape_metalarchives(letter, gb.get_band, response_len)
+    bands_raw = scrape_metalarchives(letter, get_band, response_len)
 
     # Set informative names
     bands_raw.columns = column_names
 
     # Tidy up the raw scraped output
-    bands_clean = tb.tidy_band(bands_raw)
+    bands_clean = tidy_band(bands_raw)
 
     # Save to CSV
     f_name_bands = 'data/bands/MA-band-names_{}_{}.csv'.format(letter, date_of_scraping)
@@ -44,7 +43,7 @@ for letter in letters:
     bands_clean.to_csv(f_name_bands)
 
     # SCRAPE ALBUMS
-    albums = ta.tidy_album(bands_clean['BandID'][0:20])
+    albums = tidy_album(bands_clean['BandID'][0:20])
 
     # Save to CSV
     f_name_albums = 'data/albums/MA-albums_{}_{}.csv'.format(letter, date_of_scraping)

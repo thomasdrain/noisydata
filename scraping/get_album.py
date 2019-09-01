@@ -1,12 +1,12 @@
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
-import get_url as gu
+from scraping import get_url
 
 
 def get_album(band_id = '125'):
     discog_url = 'https://www.metal-archives.com/band/discography/id/' + band_id + '/tab/all'
-    r = gu.get_url(discog_url)
+    r = get_url(discog_url)
 
     soup = BeautifulSoup(r.text, 'html.parser')
     table = soup.find('table')  # Grab the first table
