@@ -1,3 +1,19 @@
 # Ignore these subdirectories:
 venv/
 .idea/
+*/__pycache/
+
+
+# Ignore these files:
+config.*
+
+*.csv
+*/*.csv
+*/*/*.csv
+*/*/*/*.csv
+
+
+*.pyc
+*/*.pyc
+*/*/*.pyc
+*/*/*/*.pyc
