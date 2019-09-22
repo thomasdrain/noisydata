@@ -1,7 +1,9 @@
 create table metalarchives.Band (
-	NameLink varchar(500),
-    Country varchar(500),
-    Genre varchar(500),
-    Status varchar(500),
-    DateScraped date
+	BandID bigint,
+    BandName varchar(255),
+    BandLink varchar(255),
+    BandStatus varchar(255),
+    Country varchar(255),
+    Genre varchar(255),
+    Scraped datetime
 );
