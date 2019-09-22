@@ -9,10 +9,11 @@
 # then save to CSV.
 
 import datetime
-from scraping import get_band
-from scraping import scrape_metalarchives
-from scraping import tidy_album
-from scraping import tidy_band
+from scraping.get_band import get_band
+from scraping.scrape_metalarchives import scrape_metalarchives
+from scraping.tidy_band import tidy_band
+from scraping.sql.db_connect import db_connect
+from scraping.sql.db_insert_into import db_insert_into
 
 
 #get_album().to_csv("data/album_tmp.csv")
@@ -22,6 +23,9 @@ date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
 
 # Columns in the returned raw data
 column_names = ['NameLink', 'Country', 'Genre', 'Status', 'Scraped']
+
+# Connect to RDS
+rds_engine = db_connect()
 
 # Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
 #letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
@@ -37,18 +41,9 @@ for letter in letters:
     # Tidy up the raw scraped output
     bands_clean = tidy_band(bands_raw)
 
-    # Save to CSV
-    f_name_bands = 'data/bands/MA-band-names_{}_{}.csv'.format(letter, date_of_scraping)
-    print('Writing band data to csv file:', f_name_bands)
-    bands_clean.to_csv(f_name_bands)
-
-    # SCRAPE ALBUMS
-    albums = tidy_album(bands_clean['BandID'][0:20])
-
-    # Save to CSV
-    f_name_albums = 'data/albums/MA-albums_{}_{}.csv'.format(letter, date_of_scraping)
-    print('Writing album data to csv file:', f_name_albums)
-    albums.to_csv(f_name_albums)
+    # Write to RDS
+    db_insert_into(bands_clean, 'Band', rds_engine)
+    rds_engine.dispose()
 
 print('Complete!')
 
