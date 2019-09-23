@@ -49,7 +49,7 @@ def scrape_metalarchives(element, get_func, response_len = 500):
                     js = r.json()
                 # Store response
                 df = DataFrame(js['aaData'])
-                df['Scraped'] = datetime.datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')
+                df['Scraped'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
                 res = res.append(df)
 
             # If the response fails, r.json() will raise an exception, so retry
