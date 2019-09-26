@@ -1,3 +1,5 @@
+#!venv/bin/activate
+
 # Author: Thomas Drain, Jon Charest
 # Year: 2019
 
@@ -15,8 +17,6 @@ from scraping.scrape_metalarchives import scrape_metalarchives
 from scraping.tidy_band import tidy_band
 from scraping.sql.db_connect import db_connect
 from scraping.sql.db_insert_into import db_insert_into
-from scraping.sql.db_select_all import db_select_all
-from scraping.sql.db_update_log import db_update_log
 
 
 #get_album().to_csv("data/album_tmp.csv")
