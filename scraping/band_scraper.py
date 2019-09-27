@@ -1,4 +1,4 @@
-#!venv/bin/activate
+#!venv/bin/python
 
 # Author: Thomas Drain, Jon Charest
 # Year: 2019
@@ -12,11 +12,11 @@
 
 import datetime
 import pandas as pd
-from scraping.get_band import get_band
-from scraping.scrape_metalarchives import scrape_metalarchives
-from scraping.tidy_band import tidy_band
-from scraping.sql.db_connect import db_connect
-from scraping.sql.db_insert_into import db_insert_into
+from get_band import get_band
+from scrape_metalarchives import scrape_metalarchives
+from tidy_band import tidy_band
+from sql.db_connect import db_connect
+from sql.db_insert_into import db_insert_into
 
 
 #get_album().to_csv("data/album_tmp.csv")

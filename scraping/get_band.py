@@ -1,7 +1,7 @@
 
 
 
-from scraping import get_url as gu
+import get_url as gu
 
 
 def get_band(letter='A', start=0, length=500):

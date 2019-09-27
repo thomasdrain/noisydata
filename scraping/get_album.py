@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
-from scraping import get_url
+import get_url
 
 
 def get_album(band_id = '125'):
