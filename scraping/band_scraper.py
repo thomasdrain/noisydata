@@ -30,6 +30,7 @@ column_names = ['NameLink', 'Country', 'Genre', 'Status', 'Scraped']
 # Connect to RDS
 rds_engine = db_connect()
 
+
 #letters = db_select_all('')
 # Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
 #letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
@@ -44,16 +45,7 @@ last_scraped = band_log['LastScraped']
 try:
     for index, row in band_log.iterrows():
         # SCRAPE BANDS
-        bands_raw = scrape_metalarchives(row['Letter'], get_band, response_len)
-
-        # Set informative names
-        bands_raw.columns = column_names
-
-        # Tidy up the raw scraped output
-        bands_clean = tidy_band(bands_raw)
-
-        # Write to RDS
-        db_insert_into(bands_clean, 'Band', rds_engine)
+        bands_raw = scrape_metalarchives(row['Letter'], get_band, tidy_band, response_len, column_names)
 
         # Record time this letter finished scraping
         last_scraped[index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')

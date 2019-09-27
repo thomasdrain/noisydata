@@ -16,11 +16,14 @@ import json
 import datetime
 import time
 from pandas import DataFrame
+from sql.db_connect import db_connect
+from sql.db_insert_into import db_insert_into
 
-
-def scrape_metalarchives(element, get_func, response_len = 500):
+def scrape_metalarchives(element, get_func, tidy_func, response_len = 500, col_names):
 
     res = DataFrame()  # for collecting the results
+    # Connect to RDS
+    rds_engine = db_connect()
 
     # Get response from URL, then convert that response into a JSON string
     r = get_func(element, 0, response_len)
@@ -50,7 +53,17 @@ def scrape_metalarchives(element, get_func, response_len = 500):
                 # Store response
                 df = DataFrame(js['aaData'])
                 df['Scraped'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-                res = res.append(df)
+
+                # Set informative names
+                df.columns = col_names
+
+                # Tidy up the raw scraped output
+                df_clean = tidy_func(df)
+
+                # Write to RDS
+                db_insert_into(df_clean, 'Band', rds_engine)
+
+                #res = res.append(df)
 
             # If the response fails, r.json() will raise an exception, so retry
             except ValueError:
