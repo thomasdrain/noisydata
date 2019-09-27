@@ -19,7 +19,7 @@ from pandas import DataFrame
 from sql.db_connect import db_connect
 from sql.db_insert_into import db_insert_into
 
-def scrape_metalarchives(element, get_func, tidy_func, response_len = 500, col_names):
+def scrape_metalarchives(element, get_func, tidy_func, col_names, response_len = 500):
 
     res = DataFrame()  # for collecting the results
     # Connect to RDS

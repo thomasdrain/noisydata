@@ -45,7 +45,7 @@ last_scraped = band_log['LastScraped']
 try:
     for index, row in band_log.iterrows():
         # SCRAPE BANDS
-        bands_raw = scrape_metalarchives(row['Letter'], get_band, tidy_band, response_len, column_names)
+        bands_raw = scrape_metalarchives(row['Letter'], get_band, tidy_band, column_names, response_len)
 
         # Record time this letter finished scraping
         last_scraped[index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
