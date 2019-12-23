@@ -6,5 +6,6 @@ create table metalarchives.Band (
     Status varchar(255),
     Country varchar(255),
     Genre varchar(255),
+    Letter varchar(5) not null,
     Band_ScrapeID bigint
 );

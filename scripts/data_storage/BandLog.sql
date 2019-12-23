@@ -1,13 +1,11 @@
-create table metalarchives.BandLog (
+create table BandLog (
     Band_ScrapeID bigint primary key not null auto_increment,
     Letter varchar(5) not null,
     ScrapeDate datetime,
-    EndDate datetime,
-    Completed varchar(1),
-    Active varchar(1)
+    Completed varchar(1)
 );
 
-insert into metalarchives.BandLog (Letter)
+insert into BandLog (Letter)
 values
 	('NBR'),
 	('~'),

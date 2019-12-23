@@ -2,8 +2,10 @@ import json
 from sqlalchemy import create_engine
 import os
 
+
 def db_connect():
     dirname = os.path.dirname(__file__)
+
     filename = os.path.join(dirname, 'config.json')
 
     # read config details
