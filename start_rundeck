@@ -1,2 +1,0 @@
-sudo service rundeckd start
-tail -f /var/log/rundeck/service.log # wait for it to say running!

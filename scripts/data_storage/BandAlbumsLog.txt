@@ -1,0 +1,7 @@
+create table metalarchives.BandAlbumsLog (
+    BandAlbums_ScrapeID bigint, #primary
+    BandID bigint, #foreign
+    ScrapeDate datetime,
+    EndDate datetime,
+    Active varchar(10)    
+);

@@ -1,0 +1,2 @@
+cd noisydata
+./scraping/band_scraper.py
