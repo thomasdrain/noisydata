@@ -12,58 +12,61 @@
 
 import datetime
 import pandas as pd
-from data_storage import db_connect, db_insert_into
-from data_collection import get_band, scrape_metalarchives, tidy_band
-
-
-#get_album().to_csv("data/album_tmp.csv")
+import time
+from data_storage.db_connect import db_connect
+from data_storage.db_insert_into import db_insert_into
+from data_collection.get_band import get_band
+from data_collection.scrape_metalarchives import scrape_metalarchives
+from data_collection.tidy_band import tidy_band
 
 response_len = 500
 date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
 
-# Columns in the returned raw data
-column_names = ['NameLink', 'Country', 'Genre', 'Status', 'Scraped']
+# Column names I'm assigning, based on what the raw data has in it
+column_names = ['Link', 'Country', 'Genre', 'Status']
 
 # Connect to RDS
 rds_engine = db_connect()
 
-
-#letters = db_select_all('')
 # Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
-letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+#letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 #letters = 'Z'
 
-#bandlog = pd.read_sql("select * from BandLog order by LastScraped desc, Letter limit 2", rds_engine)
-bandlog_recent = pd.read_sql("""
-select t1.Letter, t2.ScrapeDate
-from BandLog t1
-inner join (
-	select Letter, max(ScrapeDate) ScrapeDate
-    from BandLog
-    group by Letter
-) t2
-on t1.Letter = t2.Letter
-""")
-print(bandlog_recent)
+# Prioritise which letters we get first: those not completed, then those completed longest ago
+log_qu = """
+select *
+from BandLog
+order by Completed, ScrapeDate
+#limit 1
+"""
 
-bandlog = pd.merge(bandlog_recent, letters, how = "outer")
+bandlog = pd.read_sql(log_qu, rds_engine)
 
 # Store these so we can batch update at the end
-bandlog_scrape_date = bandlog['LastScraped']
+new_entries = pd.DataFrame({'Letter': bandlog['Letter'],
+                            'ScrapeDate': None,
+                            'Completed': 'N'})
 
 try:
     for index, row in bandlog.iterrows():
+
+        new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
         # SCRAPE BANDS
         bands_raw = scrape_metalarchives(row['Letter'], get_band, tidy_band, column_names, response_len)
 
-        # Record time this letter finished scraping
-        last_scraped[index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        new_entries['Completed'][index] = 'Y'
+
+        time.sleep(111)
 
 finally:
-    # Update scraping log
-    bandlog['LastScraped'] = last_scraped
-    bandlog.sort_values('LastScraped', ascending = False, inplace = True)
-    db_insert_into(bandlog, 'Log_Band', rds_engine, operation = 'replace')
+    # If we have missing dates then the scrape never started
+    # (but we keep incomplete records, in case of an error)
+    print(new_entries)
+    new_entries.dropna(how='any')
+    print(new_entries)
+    # Update band log
+    db_insert_into(new_entries, 'BandLog', rds_engine)
 
     # Close connection
     rds_engine.dispose()

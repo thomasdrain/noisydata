@@ -12,12 +12,13 @@
 # Read contents in 'aaData' key and put into a pandas `DataFrame`
 # Return raw results after all requests have been made
 
-import json
+#import json
 import datetime
 import time
 from pandas import DataFrame
-from sql.db_connect import db_connect
-from sql.db_insert_into import db_insert_into
+from data_storage.db_connect import db_connect
+from data_storage.db_insert_into import db_insert_into
+
 
 def scrape_metalarchives(element, get_func, tidy_func, col_names, response_len = 500):
 
@@ -52,13 +53,12 @@ def scrape_metalarchives(element, get_func, tidy_func, col_names, response_len =
                     js = r.json()
                 # Store response
                 df = DataFrame(js['aaData'])
-                df['Scraped'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
                 # Set informative names
                 df.columns = col_names
 
                 # Tidy up the raw scraped output
-                df_clean = tidy_func(df)
+                df_clean = tidy_func(df, log_natural_key=element)
 
                 # Write to RDS
                 db_insert_into(df_clean, 'Band', rds_engine)
