@@ -12,12 +12,16 @@
 
 import datetime
 import pandas as pd
+import sys
 import time
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_band import get_band
 from data_collection.scrape_metalarchives import scrape_metalarchives
 from data_collection.tidy_band import tidy_band
+
+# This is important when running over EC2, to add this path into the workpath
+sys.path.insert(1, 'scripts/')
 
 response_len = 500
 date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
@@ -67,6 +71,9 @@ finally:
     print(new_entries)
     # Update band log
     db_insert_into(new_entries, 'BandLog', rds_engine)
+
+    # TODO
+    # UPDATE BAND TABLE WITH A JOIN TO BANDLOG, TO GET THE BAND_SCRAPEID FIELD
 
     # Close connection
     rds_engine.dispose()
