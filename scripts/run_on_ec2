@@ -1,0 +1,5 @@
+cd noisydata/
+source venv/bin/activate
+pip3 install -r requirements.txt
+python3 scripts/data_collection/band_scraper.py
+deactivate
