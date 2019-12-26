@@ -74,7 +74,7 @@ finally:
 
     # TODO
     # UPDATE BAND TABLE WITH A JOIN TO BANDLOG, TO GET THE BAND_SCRAPEID FIELD
-
+    # USE data_storage/band_update_IDs.sql
     # Close connection
     rds_engine.dispose()
 
