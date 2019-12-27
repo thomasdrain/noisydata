@@ -24,7 +24,6 @@ from data_collection.tidy_band import tidy_band
 sys.path.insert(1, 'scripts/')
 
 response_len = 500
-date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
 
 # Column names I'm assigning, based on what the raw data has in it
 column_names = ['Link', 'Country', 'Genre', 'Status']
@@ -57,7 +56,7 @@ try:
         new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
         # SCRAPE BANDS
-        bands_raw = scrape_metalarchives(row['Letter'], get_band, tidy_band, column_names, response_len)
+        bands_raw = scrape_metalarchives('Band', row['Letter'], get_band, tidy_band, column_names, response_len)
 
         new_entries['Completed'][index] = 'Y'
 

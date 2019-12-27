@@ -1,6 +1,7 @@
-from scraping import get_url
+from data_collection.get_url import get_url
 
-def get_review(date = "2019-01", start=0, length=200):
+
+def get_review(date="2019-01", start=0, length=200):
     """Gets the review listings displayed as monthly tables on M-A for
     input `date`, starting at `start` and ending at `start` + `length`.
     Returns a `Response` object. Data can be accessed by calling the `json()`
@@ -17,6 +18,6 @@ def get_review(date = "2019-01", start=0, length=200):
     if start == 0:
         print('Current month = ', date)
 
-    r = get_url(review_url, payload = review_payload)
+    r = get_url(review_url, payload=review_payload)
 
     return r

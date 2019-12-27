@@ -16,5 +16,6 @@ def get_band(letter='A', start=0, length=500):
     if start == 0:
         print('Current letter = ', letter)
 
-    r = get_url(band_url, payload = band_payload)
+    r = get_url(band_url, payload=band_payload)
+
     return r
