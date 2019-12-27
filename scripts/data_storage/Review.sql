@@ -4,8 +4,7 @@ create table metalarchives.Review (
     BandID bigint, #foreign
     AlbumID bigint, #foreign
     UserID bigint, #foreign, we aren't actively scraping yet
-/*
-variables I'm getting from the scrape, e.g. review itself, title, rating
-*/
+    ReviewDate datetime,
+    Link varchar(255),
     Review_ScrapeID bigint #foreign
 );
