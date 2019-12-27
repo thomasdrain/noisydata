@@ -11,39 +11,74 @@
 
 import datetime
 import pandas as pd
-from scraping import get_review
-from scraping import scrape_metalarchives
-from scraping import tidy_review
+import sys
+import time
+from data_storage.db_connect import db_connect
+from data_storage.db_insert_into import db_insert_into
+from data_collection.get_review import get_review
+from data_collection.scrape_metalarchives import scrape_metalarchives
+from data_collection.tidy_review import tidy_review
 
+# This is important when running over EC2, to add this path into the workpath
+sys.path.insert(1, 'scripts/')
 
 # Sequence of months we're going to scrape (going from most to least recent)
 # Note: valid dates for review by-date listing are in YYYY-MM format
 #start_date = '2019-06'
 #dates = pd.date_range(end = start_date, periods = 4, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
-dates = pd.date_range(start = '2002-07', end = '2002-08', freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
+#dates = pd.date_range(start = '2002-07', end = '2002-08', freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
+#dates = '2002-07'
 
 response_len = 200
-date_of_scraping = datetime.datetime.utcnow().strftime('%d-%m-%Y')
+
+# Connect to RDS
+rds_engine = db_connect()
 
 # Columns in the returned JSON
 # (for date scraping - see earlier code iterations for the alpha table column names)
-date_col_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
-                  'Score', 'UserLink', 'Time']
+column_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
+                'Score', 'UserLink', 'Time']
 
-# Scrape all the reviews for each month in the sequence
-for date in dates:
-    # SCRAPE REVIEWS
-    reviews_raw = scrape_metalarchives(date, get_review, response_len)
+# Prioritise which months we get first: those not completed, then those completed longest ago
+log_qu = """
+select *
+from ReviewLog
+where Month = '2002-07'
+order by Completed, ScrapeDate
+"""
 
-    # Set informative names
-    reviews_raw.columns = date_col_names
+reviewlog = pd.read_sql(log_qu, rds_engine)
 
-    # Tidy up the raw scraped output
-    reviews_clean = tidy_review(reviews_raw)
+# Store these so we can batch update at the end
+new_entries = pd.DataFrame({'Month': reviewlog['Month'],
+                            'ScrapeDate': None,
+                            'Completed': 'N'})
 
-    # Save to CSV
-    f_name_review = 'data/MA-reviews_{}_{}.csv'.format(date, date_of_scraping)
-    print('Writing review data to csv file:', f_name_review)
-    reviews_clean.to_csv(f_name_review)
+try:
+    for index, row in reviewlog.iterrows():
 
-print('Complete!')
+        new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+        # SCRAPE REVIEWS
+        reviews_raw = scrape_metalarchives('Review', row['Month'], get_review, tidy_review, column_names, response_len)
+
+        new_entries['Completed'][index] = 'Y'
+
+        time.sleep(111)
+
+finally:
+    # If we have missing dates then the scrape never started
+    # (but we keep incomplete records, in case of an error)
+    print(new_entries)
+    new_entries.dropna(how='any')
+    print(new_entries)
+    # Update review log
+    db_insert_into(new_entries, 'ReviewLog', rds_engine)
+
+    # TODO
+    # UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
+    # USE data_storage/review_update_IDs.sql
+    # Close connection
+    rds_engine.dispose()
+
+    print('Complete!')
