@@ -43,7 +43,7 @@ column_names = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
 log_qu = """
 select *
 from ReviewLog
-where Month = '2002-07'
+#where Month = '2002-07'
 order by Completed, ScrapeDate
 """
 
