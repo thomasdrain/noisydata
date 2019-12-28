@@ -1,10 +1,13 @@
 create table metalarchives.Review (
     Review_RecordID bigint primary key not null auto_increment,
-    ReviewID bigint, #foreign
+    #ReviewID bigint, #foreign it appears there isnt a review ID as such...
     BandID bigint, #foreign
     AlbumID bigint, #foreign
-    UserID bigint, #foreign, we aren't actively scraping yet
+    Username varchar(255), #foreign
     ReviewDate datetime,
-    Link varchar(255),
+    ReviewLink varchar(255),
+    #not storing these in sql currently
+    #ReviewTitle varchar(255),
+    #ReviewContent varchar(255),
     Review_ScrapeID bigint #foreign
 );

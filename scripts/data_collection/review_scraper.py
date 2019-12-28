@@ -36,8 +36,8 @@ rds_engine = db_connect()
 
 # Columns in the returned JSON
 # (for date scraping - see earlier code iterations for the alpha table column names)
-column_names = ['Date', 'ReviewLink', 'BandLink', 'AlbumLink',
-                'Score', 'UserLink', 'Time']
+column_names = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
+                'Score', 'UserLink_html', 'Time']
 
 # Prioritise which months we get first: those not completed, then those completed longest ago
 log_qu = """
@@ -69,15 +69,16 @@ try:
 finally:
     # If we have missing dates then the scrape never started
     # (but we keep incomplete records, in case of an error)
-    print(new_entries)
     new_entries.dropna(how='any')
-    print(new_entries)
+
     # Update review log
     db_insert_into(new_entries, 'ReviewLog', rds_engine)
 
     # TODO
-    # UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
+    # 1) UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
     # USE data_storage/review_update_IDs.sql
+
+    # 2) FIGURE OUT WHAT TO DO WITH THE REVIEW TEXT ITSELF
     # Close connection
     rds_engine.dispose()
 
