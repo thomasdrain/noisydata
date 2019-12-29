@@ -6,6 +6,7 @@ create table metalarchives.Review (
     Username varchar(255), #foreign
     ReviewDate datetime,
     ReviewLink varchar(255),
+    ReviewScore int,
     #not storing these in sql currently
     #ReviewTitle varchar(255),
     #ReviewContent varchar(255),

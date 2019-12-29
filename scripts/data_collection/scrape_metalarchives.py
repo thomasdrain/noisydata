@@ -44,30 +44,30 @@ def scrape_metalarchives(scrape_type, element, get_func, tidy_func, col_names, r
 
         for attempt in range(10):
             time.sleep(3)  # Obeying their robots.txt "Crawl-delay: 3"
-            # try:
-            # We've already run this response once to get the record lengths,
-            # so don't call on the first iteration
-            if i > 0:
-                r = get_func(element, start=start, length=response_len)
-                js = r.json()
-            # Store response
-            df = DataFrame(js['aaData'])
+            try:
+                # We've already run this response once to get the record lengths,
+                # so don't call on the first iteration
+                if i > 0:
+                    r = get_func(element, start=start, length=response_len)
+                    js = r.json()
+                # Store response
+                df = DataFrame(js['aaData'])
 
-            # Set informative names
-            df.columns = col_names
+                # Set informative names
+                df.columns = col_names
 
-            # Tidy up the raw scraped output
-            df_clean = tidy_func(df, log_natural_key=element)
+                # Tidy up the raw scraped output
+                print("Tidying output...")
+                df_clean = tidy_func(df, log_natural_key=element)
 
-            # Write to RDS
-            db_insert_into(df_clean, scrape_type, rds_engine)
+                # Write to RDS
+                print("Inserting into database...")
+                db_insert_into(df_clean, scrape_type, rds_engine)
 
-            #res = res.append(df)
-
-        # If the response fails, r.json() will raise an exception, so retry
-        # except ValueError:
-        #     print('JSONDecodeError on attempt ', attempt, ' of 10.')
-        #     print('Retrying...')
-        #     continue
-        # break
+            # If the response fails, r.json() will raise an exception, so retry
+            except ValueError:
+                print('JSONDecodeError on attempt ', attempt, ' of 10.')
+                print('Retrying...')
+                continue
+            break
     return res
