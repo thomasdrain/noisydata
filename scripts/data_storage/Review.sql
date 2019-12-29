@@ -5,8 +5,9 @@ create table metalarchives.Review (
     AlbumID bigint, #foreign
     Username varchar(255), #foreign
     ReviewDate datetime,
-    ReviewLink varchar(255),
+    ReviewLink varchar(500),
     ReviewScore int,
+    Month varchar(10) not null,
     #not storing these in sql currently
     #ReviewTitle varchar(255),
     #ReviewContent varchar(255),
