@@ -43,7 +43,7 @@ column_names = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
 log_qu = """
 select *
 from ReviewLog
-#where Month = '2002-07'
+where Completed = 'N'
 order by Completed, ScrapeDate
 """
 
@@ -56,24 +56,18 @@ new_entries = pd.DataFrame({'Month': reviewlog['Month'],
 
 try:
     for index, row in reviewlog.iterrows():
-
         new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
         # SCRAPE REVIEWS
         reviews_raw = scrape_metalarchives('Review', row['Month'], get_review, tidy_review, column_names, response_len)
 
+        # Update review log
         new_entries['Completed'][index] = 'Y'
+        db_insert_into(new_entries.iloc[[index]], 'ReviewLog', rds_engine)
 
-        time.sleep(111)
+        time.sleep(3)
 
 finally:
-    # If we have missing dates then the scrape never started
-    # (but we keep incomplete records, in case of an error)
-    new_entries.dropna(how='any')
-
-    # Update review log
-    db_insert_into(new_entries, 'ReviewLog', rds_engine)
-
     # TODO
     # 1) UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
     # USE data_storage/review_update_IDs.sql

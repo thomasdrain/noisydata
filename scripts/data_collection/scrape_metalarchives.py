@@ -61,7 +61,7 @@ def scrape_metalarchives(scrape_type, element, get_func, tidy_func, col_names, r
                 df_clean = tidy_func(df, log_natural_key=element)
 
                 # Write to RDS
-                print("Inserting into database...")
+                print("Inserting into database...\n")
                 db_insert_into(df_clean, scrape_type, rds_engine)
 
             # If the response fails, r.json() will raise an exception, so retry

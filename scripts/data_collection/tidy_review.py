@@ -74,7 +74,8 @@ def tidy_review(input, log_natural_key):
 
     # Return final dataset
     output = input[['BandID', 'AlbumID', 'Username',
-                    'ReviewDate', 'ReviewLink', 'ReviewScore'#, 'ReviewTitle', 'ReviewContent'
+                    'ReviewDate', 'ReviewLink', 'ReviewScore',
+                    'Month'#, 'ReviewTitle', 'ReviewContent'
                     ]]
     #output.to_csv('review.csv')
 
