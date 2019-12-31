@@ -5,7 +5,7 @@ import pandas as pd
 import re
 
 
-def tidy_review(input, log_natural_key):
+def tidy_review(input, scrape):
 
     #review_titles = []
     #reviews = []
@@ -50,15 +50,22 @@ def tidy_review(input, log_natural_key):
         user_link_soup = BeautifulSoup(link, 'html.parser')
         user_links.append(user_link_soup.a['href'])
 
-    # Store the month with the review (this is the natural key of the review log table),
-    # so we can match this table to review log and add in the scrape ID
-    input['Month'] = log_natural_key
-
     # Combine the date/time fields into a datetime we can use in database
-    date_tmp = input['Date'].replace("^(.+) (\\d+)$", "-\\2 ", regex=True)
-    input['ReviewDate'] = input['Month'].str.cat(others=[date_tmp.values,
-                                                         input['Time'].values,
-                                                         pd.Series(":00").repeat(len(input)).values])
+    # this seems a lot harder than it should be...
+    date_of_month = input['Date'].replace("^(.+) (\\d+)$", "-\\2 ", regex=True).values
+    hh_MM = input['Time'].values
+    # seconds placeholder (setting to :00 as no data stored on this
+    ss_placeholder = ":00"
+    dates_tmp = pd.DataFrame({'yyyy_mm' : scrape['Month'].repeat(len(date_of_month)),
+                            'dd': date_of_month,
+                            'hh_MM': hh_MM,
+                            'ss': ss_placeholder})
+    combo_date = dates_tmp['yyyy_mm'].map(str) + \
+                 dates_tmp['dd'].map(str) + \
+                 dates_tmp['hh_MM'].map(str) + \
+                 dates_tmp['ss'].map(str)
+    combo_date.reset_index(drop=True, inplace=True)
+    input['ReviewDate'] = combo_date
 
     # Extract the corresponding IDs from each of the link fields
     # input['ReviewID'] = [int(re.sub("^.+/(\\d+)$", "\\1", r)) for r in review_links]
@@ -72,11 +79,14 @@ def tidy_review(input, log_natural_key):
     # input['ReviewTitle'] = review_titles
     # input['ReviewContent'] = reviews
 
+    # This is important! it allows us to match the record back to the log
+    input['Review_ScrapeID'] = scrape['Review_ScrapeID']
+
     # Return final dataset
     output = input[['BandID', 'AlbumID', 'Username',
                     'ReviewDate', 'ReviewLink', 'ReviewScore',
-                    'Month'#, 'ReviewTitle', 'ReviewContent'
-                    ]]
+                    'Review_ScrapeID']]
+                    #, 'ReviewTitle', 'ReviewContent'
     #output.to_csv('review.csv')
 
     return output

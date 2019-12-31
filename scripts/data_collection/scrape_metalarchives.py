@@ -19,7 +19,7 @@ from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 
 
-def scrape_metalarchives(scrape_type, element, get_func, tidy_func, col_names, response_len=500):
+def scrape_metalarchives(scrape_type, element, get_func, tidy_func, col_names, scrape_info, response_len=500):
 
     res = DataFrame()  # for collecting the results
     # Connect to RDS
@@ -58,7 +58,7 @@ def scrape_metalarchives(scrape_type, element, get_func, tidy_func, col_names, r
 
                 # Tidy up the raw scraped output
                 print("Tidying output...")
-                df_clean = tidy_func(df, log_natural_key=element)
+                df_clean = tidy_func(df, scrape=scrape_info)
 
                 # Write to RDS
                 print("Inserting into database...\n")
@@ -70,4 +70,3 @@ def scrape_metalarchives(scrape_type, element, get_func, tidy_func, col_names, r
                 print('Retrying...')
                 continue
             break
-    return res

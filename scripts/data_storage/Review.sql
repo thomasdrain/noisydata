@@ -7,7 +7,6 @@ create table metalarchives.Review (
     ReviewDate datetime,
     ReviewLink varchar(500),
     ReviewScore int,
-    Month varchar(10) not null,
     #not storing these in sql currently
     #ReviewTitle varchar(255),
     #ReviewContent varchar(255),

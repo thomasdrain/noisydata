@@ -36,15 +36,14 @@ rds_engine = db_connect()
 
 # Columns in the returned JSON
 # (for date scraping - see earlier code iterations for the alpha table column names)
-column_names = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
-                'Score', 'UserLink_html', 'Time']
+raw_data_fields = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
+                    'Score', 'UserLink_html', 'Time']
 
 # Prioritise which months we get first: those not completed, then those completed longest ago
 log_qu = """
 select *
 from ReviewLog
-where Completed = 'N'
-order by Completed, ScrapeDate
+where ScrapeDate is null and Month = '2019-11'
 """
 
 reviewlog = pd.read_sql(log_qu, rds_engine)
@@ -52,28 +51,39 @@ reviewlog = pd.read_sql(log_qu, rds_engine)
 # Store these so we can batch update at the end
 new_entries = pd.DataFrame({'Month': reviewlog['Month'],
                             'ScrapeDate': None,
-                            'Completed': 'N'})
+                            'Completed': None})
 
-try:
-    for index, row in reviewlog.iterrows():
-        new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+# We'll need this query to update the review records themselves with the log's scrape ID
+this_scrape_qu = """
+select *
+from ReviewLog
+where Review_ScrapeID = (
+    select max(Review_ScrapeID) 
+    from ReviewLog
+)
+"""
 
-        # SCRAPE REVIEWS
-        reviews_raw = scrape_metalarchives('Review', row['Month'], get_review, tidy_review, column_names, response_len)
+for index, row in reviewlog.iterrows():
+    new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
-        # Update review log
-        new_entries['Completed'][index] = 'Y'
-        db_insert_into(new_entries.iloc[[index]], 'ReviewLog', rds_engine)
+    # Update review log
+    # I'll need to figure out how to check whether the run was completed successfully...
+    # new_entries['Completed'][index] = 'Y'
+    db_insert_into(new_entries.iloc[[index]], 'ReviewLog', rds_engine)
+    this_scrape = pd.read_sql(this_scrape_qu, rds_engine)
 
-        time.sleep(3)
+    # SCRAPE REVIEWS AND STORE IN DB
+    scrape_metalarchives('Review', row['Month'], get_review, tidy_review,
+                         raw_data_fields, this_scrape, response_len)
 
-finally:
-    # TODO
-    # 1) UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
-    # USE data_storage/review_update_IDs.sql
+    time.sleep(3)
 
-    # 2) FIGURE OUT WHAT TO DO WITH THE REVIEW TEXT ITSELF
-    # Close connection
-    rds_engine.dispose()
+# TODO
+# 1) UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
+# USE data_storage/review_update_IDs.sql
 
-    print('Complete!')
+# 2) FIGURE OUT WHAT TO DO WITH THE REVIEW TEXT ITSELF
+# Close connection
+rds_engine.dispose()
+
+print('Complete!')
