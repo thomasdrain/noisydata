@@ -16,7 +16,7 @@ def get_review(date="2019-01", start=0, length=200):
                       'iDisplayStart': start,
                       'iDisplayLength': length}
     if start == 0:
-        print('Current month = ', date)
+        print('*** Current month = ', date)
 
     r = get_url(review_url, payload=review_payload)
 

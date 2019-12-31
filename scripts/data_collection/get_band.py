@@ -14,7 +14,7 @@ def get_band(letter='A', start=0, length=500):
                     'iDisplayStart': start,  # set start index of band names returned
                     'iDisplayLength': length} # only response lengths of 500 work
     if start == 0:
-        print('Current letter = ', letter)
+        print('*** Current letter = ', letter)
 
     r = get_url(band_url, payload=band_payload)
 
