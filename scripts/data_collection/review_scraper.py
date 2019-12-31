@@ -43,7 +43,7 @@ raw_data_fields = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
 log_qu = """
 select *
 from ReviewLog
-where ScrapeDate is null and Month = '2019-11'
+where ScrapeDate is null# and Month = '2019-11'
 """
 
 reviewlog = pd.read_sql(log_qu, rds_engine)
