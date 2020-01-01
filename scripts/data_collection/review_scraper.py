@@ -13,14 +13,21 @@ import datetime
 import pandas as pd
 import sys
 import time
+
+# This is important when running over EC2, to add this path into the workpath
+sys.path.append('scripts/')
+sys.path.append('/home/ubuntu/noisydata/scripts/data_storage')
+
+for p in sys.path:
+    print(p)
+
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_review import get_review
 from data_collection.scrape_metalarchives import scrape_metalarchives
 from data_collection.tidy_review import tidy_review
 
-# This is important when running over EC2, to add this path into the workpath
-sys.path.insert(1, 'scripts/')
+
 
 
 # Sequence of months we're going to scrape (going from most to least recent)
