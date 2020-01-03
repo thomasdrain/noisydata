@@ -1,8 +1,7 @@
 from bs4 import BeautifulSoup
-from data_collection.get_url import get_url
-import time
 import pandas as pd
 import re
+import sys
 
 
 def tidy_review(input, scrape):
@@ -69,7 +68,15 @@ def tidy_review(input, scrape):
 
     # Extract the corresponding IDs from each of the link fields
     # input['ReviewID'] = [int(re.sub("^.+/(\\d+)$", "\\1", r)) for r in review_links]
-    input['BandID'] = [int(re.sub("^.+/(\\d+)$", "\\1", b)) for b in band_links]
+    # input['BandID'] = [int(re.sub("^.+/(\\d+)$", "\\1", b)) for b in band_links]
+    for n, b in enumerate(band_links):
+        try:
+            input.at[n, 'BandID'] = int(re.sub("^.+/(\\d+)$", "\\1", b))
+        except Exception as e:
+            print("Exception (no band ID? Try searching the raw data for '/\ where the ID is missing/deleted): ")
+            print(e)
+            continue
+
     input['AlbumID'] = [int(re.sub("^.+/(\\d+)$", "\\1", a)) for a in album_links]
     input['Username'] = [re.sub("^.+/(.+)$", "\\1", u) for u in user_links] # note that Username is a text field
     input['ReviewLink'] = review_links
@@ -80,7 +87,7 @@ def tidy_review(input, scrape):
     # input['ReviewContent'] = reviews
 
     # This is important! it allows us to match the record back to the log
-    input['Review_ScrapeID'] = scrape['Review_ScrapeID']
+    input['Review_ScrapeID'] = scrape.at[0, 'Review_ScrapeID'].repeat(len(input))
 
     # Return final dataset
     output = input[['BandID', 'AlbumID', 'Username',
