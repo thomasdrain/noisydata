@@ -13,7 +13,6 @@
 import datetime
 import pandas as pd
 import sys
-import time
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_band import get_band
@@ -26,57 +25,57 @@ sys.path.insert(1, 'scripts/')
 response_len = 500
 
 # Column names I'm assigning, based on what the raw data has in it
-column_names = ['Link', 'Country', 'Genre', 'Status']
+# Note: keeping the names as lower case to be treated as case insensitive in Oracle,
+# see https://docs.sqlalchemy.org/en/13/dialects/oracle.html
+raw_data_fields = ['link', 'country', 'genre', 'status']
 
 # Connect to RDS
 rds_engine = db_connect()
 
 # Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
-#letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
-#letters = 'Z'
-
-# Prioritise which letters we get first: those not completed, then those completed longest ago
-log_qu = """
-select *
-from BandLog
-order by Completed, ScrapeDate
-#limit 1
-"""
-
-bandlog = pd.read_sql(log_qu, rds_engine)
+letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 
 # Store these so we can batch update at the end
-new_entries = pd.DataFrame({'Letter': bandlog['Letter'],
-                            'ScrapeDate': None,
-                            'Completed': 'N'})
+bandlog_entries = pd.DataFrame({'letter': letters,
+                                'scrapedate': None})
+
+bandlog_qu = """
+SELECT t1.Band_ScrapeID
+FROM BANDLOG t1
+INNER JOIN (
+    SELECT MAX(ScrapeDate) max_date
+    FROM BANDLOG
+) t2
+on t1.ScrapeDate = t2.max_date
+"""
 
 try:
-    for index, row in bandlog.iterrows():
+    for index, this_scrape in bandlog_entries.iterrows():
+        # Scrape bands
+        df_raw = scrape_metalarchives(item=this_scrape['letter'],
+                                      get_func=get_band,
+                                      col_names=raw_data_fields,
+                                      response_len=response_len)
 
-        new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        # Update band log
+        print("Updating scrape log...")
+        bandlog_entries.loc[index, 'scrapedate'] = datetime.datetime.utcnow()
+        db_insert_into(bandlog_entries.iloc[index:index+1], 'bandlog', rds_engine)
 
-        # SCRAPE BANDS
-        bands_raw = scrape_metalarchives('Band', row['Letter'], get_band, tidy_band, column_names, response_len)
+        # Get the last entry of the band log, so we can take the scrape ID
+        last_entry = pd.read_sql(bandlog_qu, rds_engine)
 
-        new_entries['Completed'][index] = 'Y'
+        # Tidy up the raw scraped output
+        print("Tidying output...")
+        df_clean = tidy_band(df_raw, letter=this_scrape['letter'])
+        df_clean.loc[:, 'band_scrapeid'] = last_entry.loc[0, 'band_scrapeid']
 
-        time.sleep(111)
+        # Write to RDS
+        print("Inserting into database...\n")
+        db_insert_into(new_rows=df_clean, table='band', engine=rds_engine)
 
 finally:
-    # If we have missing dates then the scrape never started
-    # (but we keep incomplete records, in case of an error)
-    print(new_entries)
-    new_entries.dropna(how='any')
-    print(new_entries)
-    # Update band log
-    db_insert_into(new_entries, 'BandLog', rds_engine)
-
-    # TODO
-    # UPDATE BAND TABLE WITH A JOIN TO BANDLOG, TO GET THE BAND_SCRAPEID FIELD
-    # USE data_storage/band_update_IDs.sql
     # Close connection
     rds_engine.dispose()
-
     print('Complete!')
-
 
