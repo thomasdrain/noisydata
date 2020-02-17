@@ -1,38 +1,20 @@
-create table BandLog (
-    Band_ScrapeID bigint primary key not null auto_increment,
-    Letter varchar(5) not null,
-    ScrapeDate datetime,
-    Completed varchar(1)
+CREATE SEQUENCE bandlog_seq START WITH 1;
+
+CREATE TABLE BANDLOG (
+    Band_ScrapeID   NUMBER(10)  NOT NULL,
+    Letter          VARCHAR2(5) NOT NULL,
+    ScrapeDate      DATE
 );
 
-insert into BandLog (Letter)
-values
-	('NBR'),
-	('~'),
-	('A'),
-	('B'),
-	('C'),
-	('D'),
-	('E'),
-	('F'),
-	('G'),
-	('H'),
-	('I'),
-	('J'),
-	('K'),
-	('L'),
-	('M'),
-	('N'),
-	('O'),
-	('P'),
-	('Q'),
-	('R'),
-	('S'),
-	('T'),
-	('U'),
-	('V'),
-	('W'),
-	('X'),
-	('Y'),
-	('Z')
-;
+ALTER TABLE BANDLOG ADD (
+    CONSTRAINT Band_ScrapeID PRIMARY KEY (Band_ScrapeID));
+    
+CREATE OR REPLACE TRIGGER bandlog_trg
+BEFORE INSERT ON BANDLOG
+FOR EACH ROW
+
+BEGIN
+    SELECT bandlog_seq.NEXTVAL
+    INTO :new.Band_ScrapeID
+    FROM Dual;
+END;

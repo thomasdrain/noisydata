@@ -1,6 +1,6 @@
 CREATE SEQUENCE band_seq START WITH 1;
 
-CREATE TABLE Band (
+CREATE TABLE BAND (
     Band_RecordID   NUMBER(10)          NOT NULL,
     BandID          NUMBER(10)          NOT NULL, --foreign
     Name            VARCHAR2(255),
@@ -12,11 +12,11 @@ CREATE TABLE Band (
     Band_ScrapeID   NUMBER(10)
 );
 
-ALTER TABLE Band ADD (
+ALTER TABLE BAND ADD (
     CONSTRAINT Band_RecordID PRIMARY KEY (Band_RecordID));
     
 CREATE OR REPLACE TRIGGER band_trg
-BEFORE INSERT ON Band
+BEFORE INSERT ON BAND
 FOR EACH ROW
 
 BEGIN
