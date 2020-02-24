@@ -12,6 +12,7 @@
 
 import datetime
 import pandas as pd
+import pytz
 import sys
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
@@ -34,6 +35,9 @@ rds_engine = db_connect()
 
 # Valid inputs for the `letter` parameter of the URL are NBR, ~, or A through Z
 letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
+
+# Need this for calculating scrape datetimes
+ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
 bandlog_entries = pd.DataFrame({'letter': letters,
@@ -59,7 +63,13 @@ try:
 
         # Update band log
         print("Updating scrape log...")
-        bandlog_entries.loc[index, 'scrapedate'] = datetime.datetime.utcnow()
+        # Set the scrape as the current time (not 100% accurate but close enough...)
+        irl_time = datetime.datetime.now(ireland)
+        bandlog_entries.loc[index, 'scrapedate'] = irl_time
+        # For some reason the scrapedate series is stored in bandlog_entries as an object, not a datetime:
+        # this causes issues when inserting into DB (see db_insert_into)
+        bandlog_entries[["scrapedate"]] = bandlog_entries[["scrapedate"]].apply(pd.to_datetime)
+
         db_insert_into(bandlog_entries.iloc[index:index+1], 'bandlog', rds_engine)
 
         # Get the last entry of the band log, so we can take the scrape ID
