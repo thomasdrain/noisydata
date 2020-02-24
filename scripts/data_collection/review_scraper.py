@@ -11,16 +11,9 @@
 
 import datetime
 import pandas as pd
+import pytz
 import sys
 import time
-
-# This is important when running over EC2, to add this path into the workpath
-sys.path.append('scripts/')
-sys.path.append('/home/ubuntu/noisydata/scripts/data_storage')
-
-for p in sys.path:
-    print(p)
-
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_review import get_review
@@ -28,70 +21,72 @@ from data_collection.scrape_metalarchives import scrape_metalarchives
 from data_collection.tidy_review import tidy_review
 
 
-
-
-# Sequence of months we're going to scrape (going from most to least recent)
+# Sequence of months we're going to scrape
 # Note: valid dates for review by-date listing are in YYYY-MM format
-#start_date = '2019-06'
-#dates = pd.date_range(end = start_date, periods = 4, freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
-#dates = pd.date_range(start = '2002-07', end = '2002-08', freq = 'M').map(lambda x: x.strftime('%Y-%m'))[::-1]
-#dates = '2002-07'
+end_month = '2020-01'
+months = pd.date_range(start='2002-07', end=end_month, freq='M').map(lambda x: x.strftime('%Y-%m'))
 
 response_len = 200
 
 # Connect to RDS
 rds_engine = db_connect()
 
-# Columns in the returned JSON
-# (for date scraping - see earlier code iterations for the alpha table column names)
-raw_data_fields = ['Date', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
-                    'Score', 'UserLink_html', 'Time']
+# Column names I'm assigning, based on what the raw data has in it
+# Note: keeping the names as lower case to be treated as case insensitive in Oracle,
+# see https://docs.sqlalchemy.org/en/13/dialects/oracle.html
+raw_data_fields = ['date', 'reviewlink_html', 'bandlink_html', 'albumlink_html',
+                    'score', 'userlink_html', 'time']
 
-# Prioritise which months we get first: those not completed, then those completed longest ago
-log_qu = """
-select *
-from ReviewLog
-where ScrapeDate is null or Completed = 'N'# and Month = '2019-11'
-"""
-
-reviewlog = pd.read_sql(log_qu, rds_engine)
+# Need this for calculating scrape datetimes
+ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
-new_entries = pd.DataFrame({'Month': reviewlog['Month'],
-                            'ScrapeDate': None,
-                            'Completed': None})
+reviewlog_entries = pd.DataFrame({'month': months,
+                                  'scrapedate': None})
 
-# We'll need this query to update the review records themselves with the log's scrape ID
-this_scrape_qu = """
-select *
-from ReviewLog
-where Review_ScrapeID = (
-    select max(Review_ScrapeID) 
-    from ReviewLog
-)
+reviewlog_qu = """
+SELECT t1.Review_ScrapeID
+FROM REVIEWLOG t1
+INNER JOIN (
+    SELECT MAX(ScrapeDate) max_date
+    FROM REVIEWLOG
+) t2
+on t1.ScrapeDate = t2.max_date
 """
 
-for index, row in reviewlog.iterrows():
-    new_entries['ScrapeDate'][index] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+try:
+    for index, this_scrape in reviewlog_entries.iterrows():
+        # Scrape reviews
+        df_raw = scrape_metalarchives(item=this_scrape['month'],
+                                      get_func=get_review,
+                                      col_names=raw_data_fields,
+                                      response_len=response_len)
 
-    # Update review log
-    # I'll need to figure out how to check whether the run was completed successfully...
-    # new_entries['Completed'][index] = 'Y'
-    db_insert_into(new_entries.iloc[[index]], 'ReviewLog', rds_engine)
-    this_scrape = pd.read_sql(this_scrape_qu, rds_engine)
+        print("Updating scrape log...")
+        # Set the scrape as the current time (not 100% accurate but close enough...)
+        irl_time = datetime.datetime.now(ireland)
+        reviewlog_entries.loc[index, 'scrapedate'] = irl_time
 
-    # SCRAPE REVIEWS AND STORE IN DB
-    scrape_metalarchives('Review', row['Month'], get_review, tidy_review,
-                         raw_data_fields, this_scrape, response_len)
+        # For some reason the scrapedate series is stored in reviewlog_entries as an object, not a datetime:
+        # this causes issues when inserting into DB (see db_insert_into)
+        reviewlog_entries[["scrapedate"]] = reviewlog_entries[["scrapedate"]].apply(pd.to_datetime)
 
-    time.sleep(3)
+        # Insert the new log entry
+        db_insert_into(reviewlog_entries.iloc[index:index+1], 'reviewlog', rds_engine)
 
-# TODO
-# 1) UPDATE REVIEW TABLE WITH A JOIN TO REVIEWLOG, TO GET THE REVIEW_SCRAPEID FIELD
-# USE data_storage/review_update_IDs.sql
+        # Get the last entry of the band log, so we can take the scrape ID
+        last_entry = pd.read_sql(reviewlog_qu, rds_engine)
 
-# 2) FIGURE OUT WHAT TO DO WITH THE REVIEW TEXT ITSELF
-# Close connection
-rds_engine.dispose()
+        # Tidy up the raw scraped output
+        print("Tidying output...")
+        df_clean = tidy_review(df_raw, month=this_scrape['month'])
+        df_clean.loc[:, 'review_scrapeid'] = last_entry.loc[0, 'review_scrapeid']
 
-print('Complete!')
+        # Write to RDS
+        print("Inserting into database...\n")
+        db_insert_into(new_rows=df_clean, table='review', engine=rds_engine)
+
+finally:
+    # Close connection
+    rds_engine.dispose()
+    print('Complete!')
