@@ -5,11 +5,11 @@ CREATE SEQUENCE review_seq START WITH 1;
 
 CREATE TABLE REVIEW (
     REVIEW_RECORDID     NUMBER(10)      NOT NULL,
-    BANDID              NUMBER(10)      NOT NULL,
-    ALBUMID             NUMBER(10)      NOT NULL,
-    USERNAME            VARCHAR2(255)   NOT NULL,
-    REVIEWDATE          DATE            NOT NULL,
-    REVIEWLINK          VARCHAR2(255),
+    BANDID              NUMBER(10),
+    ALBUMID             NUMBER(10),
+    USERNAME            VARCHAR2(255),
+    REVIEWDATE          DATE,
+    REVIEWLINK          VARCHAR2(500),
     REVIEWSCORE         INT,
     REVIEW_SCRAPEID     NUMBER(10)
 );
