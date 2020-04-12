@@ -3,7 +3,7 @@
 # Author: Thomas Drain
 # Year: 2019
 
-# Script for scraping discographies (i.e. list of albums of each band) from metal-archives.com
+# Script for scraping albums from metal-archives.com
 
 # Approach:
 # For each album in our Bands table,
@@ -18,7 +18,7 @@ from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_discog import get_discog
 from data_collection.scrape_metalarchives import scrape_metalarchives
-from data_collection.tidy_discog import tidy_discog
+from data_collection.tidy_album import tidy_album
 
 # This is important when running over EC2, to add this path into the workpath
 sys.path.insert(1, 'scripts/')
@@ -33,7 +33,7 @@ raw_data_fields = ['bandid', 'albumname', 'albumtype', 'albumyear', 'reviews', '
 # Connect to RDS
 rds_engine = db_connect()
 
-# Valid inputs for the `band` parameter of the URL are NBR, ~, or A through Z
+# All the band IDs we have on record, within which we'll search for albums
 bands = 'xxx'  # QUERY GETTING ALL BAND IDS
 
 # Need this for calculating scrape datetimes
@@ -41,10 +41,12 @@ ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
 discoglog_entries = pd.DataFrame({'band': bands,
-                                'scrapedate': None})
+                                  'scrapedate': None})
 
+# The most recent discography scapes (i.e. the last time
+# the albums were scraped from each band)
 discoglog_qu = """
-SELECT t1.BandDiscogs_ScrapeID
+SELECT t1.Discog_ScrapeID
 FROM DISCOGLOG t1
 INNER JOIN (
     SELECT MAX(ScrapeDate) max_date
@@ -52,11 +54,10 @@ INNER JOIN (
 ) t2
 on t1.ScrapeDate = t2.max_date
 """
-##############
 
 try:
     for index, this_scrape in discoglog_entries.iterrows():
-        # Scrape discography
+        # Scrape albums
         df_raw = scrape_metalarchives(item=this_scrape['band'],
                                       get_func=get_discog,
                                       col_names=raw_data_fields,
@@ -78,13 +79,13 @@ try:
 
         # Tidy up the raw scraped output
         print("Tidying output...")
-        df_clean = tidy_discog(df_raw, band=this_scrape['band'])
+        df_clean = tidy_album(df_raw, band=this_scrape['band'])
         df_clean.loc[:, 'discog_scrapeid'] = last_entry.loc[0, 'discog_scrapeid']
 
         # Write to RDS
         print("Inserting into database...\n")
-        db_insert_into(new_rows=df_clean, table='discog', engine=rds_engine,
-                       local='../../data/DISCOG_{}.csv'.format(irl_time.strftime('%Y-%m-%d')))
+        db_insert_into(new_rows=df_clean, table='album', engine=rds_engine,
+                       local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d')))
 finally:
     # Close connection
     rds_engine.dispose()
