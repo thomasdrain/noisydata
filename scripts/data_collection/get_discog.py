@@ -14,40 +14,78 @@ import pandas as pd
 
 
 def get_discog(band):
-    discog_url = 'https://www.metal-archives.com/band/discography/id/' + band + '/tab/all'
+
+    print('*** Current band ID = ', band)
+
+    discog_url = 'https://www.metal-archives.com/band/discography/id/' + str(band) + '/tab/all'
     response = get_url(discog_url)
 
     # Turn raw output (a series of tables) into a clean tabular output
     soup = BeautifulSoup(response.text, 'html.parser')
     table = soup.find('table')  # Grab the first table
+
+    if table is None:
+        print("* No such band ID")
+        return None
+
     albums = table.find_all('tr')
-    clean_dat = pd.DataFrame(data='', columns=['BandID', 'AlbumName', 'AlbumType', 'AlbumYear', 'Reviews', 'Rating'],
-                             index=range(0, len(albums) - 1))
 
-    # Set the band ID for these albums
-    clean_dat[clean_dat.columns[0]] = band
+    # If this message is displayed then the band has no recorded album - move on
+    if albums[1].get_text().strip() == "Nothing entered yet. Please add the releases, if applicable.":
+        print("* No albums listed")
+        return None
 
-    # Tidy up each row (album)
-    album_marker = 0
-    for album in albums[1:]:  # we can ignore the header row
-        column_marker = 1  # start appending data from col 1, after band ID
-        columns = album.find_all('td')
-        for column in columns:
-            clean_dat.iat[album_marker, column_marker] = column.get_text().strip()
-            column_marker += 1
+    else:
+        # Note: the order of these columns is important - watch the integer indexing below
+        clean_dat = pd.DataFrame(data='', columns=['bandid', 'albumlink', 'albumid',
+                                                   'albumname', 'albumtype', 'albumyear',
+                                                   'reviews', 'rating'],
+                                 index=range(0, len(albums) - 1))
 
-        # If there's at least one review, the <td> will have the form '2 (67%)',
-        # which denote the number of reviews and average rating.
-        # Extract these into their own columns.
-        tmp_review_col = clean_dat.loc[album_marker, 'Reviews']
-        if tmp_review_col != '':
-            # review count (the first set of digits before the space)
-            clean_dat.loc[album_marker, 'Reviews'] = re.sub("(\\d+) \\(\\d+%\\)*$", "\\1", tmp_review_col)
+        # Set the band ID for these albums
+        clean_dat[clean_dat.columns[0]] = band
 
-            # the rating (a number followed by a percentage sign)
-            tmp_rating_col = re.sub("\\d+ \\((\\d+)%\\)*$", "\\1", tmp_review_col)
-            clean_dat.loc[album_marker, 'Rating'] = re.sub("(\\d+)%$", "\\1", tmp_rating_col)
+        # Tidy up each row (album)
+        album_counter = 0
+        for album in albums[1:]:  # we can ignore the header row
+            raw_columns = album.find_all('td')
 
-        album_marker += 1
+            # Extract the album link/ID and then fill them in
+            album_link = raw_columns[0].a['href']
+            album_id = re.sub(".+/(\\d+)$", "\\1", album_link)
+            clean_dat.iat[album_counter, 1] = album_link
+            clean_dat.iat[album_counter, 2] = album_id
 
-    return clean_dat
+            # start appending data into our clean dataset from col 3
+            # (after band ID, album ID and album link which we've already filled in)
+            column_counter = 3
+
+            # Put each <td> text into our clean dataset, sequentially
+            for column in raw_columns:
+                clean_dat.iat[album_counter, column_counter] = column.get_text().strip()
+                column_counter += 1
+
+            # If there's at least one review, the <td> will have the form '2 (67%)',
+            # which denote the number of reviews and average rating.
+            # Extract these into their own columns.
+            tmp_review_col = clean_dat.loc[album_counter, 'reviews']
+            if tmp_review_col != '':
+                # review count (the first set of digits before the space)
+                review_count = re.sub("(\\d+) \\(\\d+%\\)*$", "\\1", tmp_review_col)
+                clean_dat.loc[album_counter, 'reviews'] = review_count
+
+                # the rating (a number followed by a percentage sign)
+                tmp_rating_col = re.sub("\\d+ \\((\\d+)%\\)*$", "\\1", tmp_review_col)
+                rating = re.sub("(\\d+)%$", "\\1", tmp_rating_col)  # remove the % sign
+                clean_dat.loc[album_counter, 'rating'] = rating
+
+            album_counter += 1
+
+        # This will be filled in in the main script
+        clean_dat['discog_scrapeid'] = None
+        clean_dat.reset_index(drop=True, inplace=True)
+
+        res = clean_dat[['bandid', 'albumid', 'albumname',
+                         'albumtype', 'albumyear', 'reviews',
+                         'rating', 'albumlink', 'discog_scrapeid']]
+        return res

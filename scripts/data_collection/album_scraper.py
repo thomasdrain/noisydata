@@ -14,6 +14,7 @@ import datetime
 import pandas as pd
 import pytz
 import sys
+import time
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_discog import get_discog
@@ -27,71 +28,72 @@ sys.path.insert(1, 'scripts/')
 raw_data_fields = ['bandid', 'albumname', 'albumtype', 'albumyear', 'reviews', 'rating']
 
 # Connect to RDS
-#UPDATEME
-rds_engine = 'X' # db_connect()
+rds_engine = db_connect()
 
 # All the band IDs we have on record, within which we'll search for albums
-#UPDATEME
-bands = ['125']  # QUERY GETTING ALL BAND IDS
+band_id_qu = """
+SELECT DISTINCT BandID
+FROM BAND
+"""
+
+print("Querying full list of bands...")
+bands_df = pd.read_sql(band_id_qu, rds_engine)
+bands = bands_df.loc[:, "bandid"]
 
 # Need this for calculating scrape datetimes
 ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
-discoglog_entries = pd.DataFrame({'band': bands,
+discoglog_entries = pd.DataFrame({'bandid': bands,
                                   'scrapedate': None})
 
-# The most recent discography scapes (i.e. the last time
+# The most recent discography scrapes (i.e. the last time
 # the albums were scraped from each band)
-#UPDATEME
-# discoglog_qu = """
-# SELECT t1.Discog_ScrapeID
-# FROM DISCOGLOG t1
-# INNER JOIN (
-#     SELECT MAX(ScrapeDate) max_date
-#     FROM DISCOGLOG
-# ) t2
-# on t1.ScrapeDate = t2.max_date
-# """
+discoglog_qu = """
+SELECT t1.Discog_ScrapeID
+FROM DISCOGLOG t1
+INNER JOIN (
+    SELECT MAX(ScrapeDate) max_date
+    FROM DISCOGLOG
+) t2
+on t1.ScrapeDate = t2.max_date
+"""
 
 try:
     for index, this_scrape in discoglog_entries.iterrows():
         # Scrape albums
-        df_raw = get_discog(this_scrape['band'])
+        df_raw = get_discog(this_scrape['bandid'])
 
-        # Update discography log
-        print("Updating scrape log...")
-        # Set the scrape as the current time (not 100% accurate but close enough...)
-        irl_time = datetime.datetime.now(ireland)
-        discoglog_entries.loc[index, 'scrapedate'] = irl_time
-        # For some reason the scrapedate series is stored in discoglog_entries as an object, not a datetime:
-        # this causes issues when inserting into DB (see db_insert_into)
-        discoglog_entries[["scrapedate"]] = discoglog_entries[["scrapedate"]].apply(pd.to_datetime)
+        # If no result returned then there is no discography for that band (i.e. no albums)
+        if df_raw is None:
+            print("Moving on...\n")
+        else:
+            # Update discography log
+            print("Updating scrape log...")
+            # Set the scrape as the current time (not 100% accurate but close enough...)
+            irl_time = datetime.datetime.now(ireland)
+            discoglog_entries.loc[index, 'scrapedate'] = irl_time
+            # For some reason the scrapedate series is stored in discoglog_entries as an object, not a datetime:
+            # this causes issues when inserting into DB (see db_insert_into)
+            discoglog_entries[["scrapedate"]] = discoglog_entries[["scrapedate"]].apply(pd.to_datetime)
 
-        # UPDATEME
-        #db_insert_into(discoglog_entries.iloc[index:index+1], 'discoglog', rds_engine)
+            db_insert_into(discoglog_entries.iloc[index:index+1], 'discoglog', rds_engine)
 
-        # Get the last entry of the discography log, so we can take the scrape ID
-        # UPDATEME
-        #last_entry = pd.read_sql(discoglog_qu, rds_engine)
+            # Get the last entry of the discography log, so we can take the scrape ID
+            last_entry = pd.read_sql(discoglog_qu, rds_engine)
 
-        # Tidy up the raw scraped output
-        print("Tidying output...")
+            # Currently there is no additional 'tidy' step; all is done in the
+            # get_discog() as it's a fairly easy manipulation
+            df_clean = df_raw
+            df_clean.loc[:, 'discog_scrapeid'] = last_entry.loc[0, 'discog_scrapeid']
 
-        # Currently there is no additional 'tidy' step; all is done in the
-        # get_discog() as it's a fairly easy manipulation
-        df_clean = df_raw
-        # UPDATEME
-        df_clean.loc[:, 'discog_scrapeid'] = 'X' # last_entry.loc[0, 'discog_scrapeid']
-
-        # Write to RDS
-        print("Inserting into database...\n")
-        # UPDATEME
-        db_insert_into(new_rows=df_clean, table='', engine=rds_engine,
-                       local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d')))
+            # Write to RDS
+            print("Inserting into database...\n")
+            db_insert_into(new_rows=df_clean, table='album', engine=rds_engine,
+                           local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d')))
+        time.sleep(2)
 finally:
     # Close connection
-    #UPDATEME
-    #rds_engine.dispose()
+    rds_engine.dispose()
     print('Complete!')
 
