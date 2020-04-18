@@ -15,8 +15,6 @@ import pandas as pd
 
 def get_discog(band):
 
-    print('*** Current band ID = ', band)
-
     discog_url = 'https://www.metal-archives.com/band/discography/id/' + str(band) + '/tab/all'
     response = get_url(discog_url)
 

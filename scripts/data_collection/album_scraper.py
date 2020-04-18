@@ -30,10 +30,18 @@ raw_data_fields = ['bandid', 'albumname', 'albumtype', 'albumyear', 'reviews', '
 # Connect to RDS
 rds_engine = db_connect()
 
-# All the band IDs we have on record, within which we'll search for albums
+# All the band IDs we have on record that have not already been scraped.
+# We'll search for albums for each of these bands.
+# Note: there are around 134,000 bands so all up this is almost 5 days of scraping!
+
 band_id_qu = """
 SELECT DISTINCT BandID
 FROM BAND
+WHERE BandID NOT IN (
+    SELECT BandID 
+    FROM DISCOGLOG 
+    WHERE BandID IS NOT NULL
+)
 """
 
 print("Querying full list of bands...")
@@ -61,6 +69,10 @@ on t1.ScrapeDate = t2.max_date
 
 try:
     for index, this_scrape in discoglog_entries.iterrows():
+
+        print('*** Scraping albums for band #', index, 'of ',
+              len(discoglog_entries), ' (band ID', this_scrape['bandid'], ')', sep="")
+
         # Scrape albums
         df_raw = get_discog(this_scrape['bandid'])
 
