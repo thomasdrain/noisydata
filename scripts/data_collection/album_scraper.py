@@ -64,22 +64,23 @@ try:
         # Scrape albums
         df_raw = get_discog(this_scrape['bandid'])
 
+        # Update discography log
+        print("Updating scrape log...")
+        # Set the scrape as the current time (not 100% accurate but close enough...)
+        irl_time = datetime.datetime.now(ireland)
+        discoglog_entries.loc[index, 'scrapedate'] = irl_time
+        # For some reason the scrapedate series is stored in discoglog_entries as an object, not a datetime:
+        # this causes issues when inserting into DB (see db_insert_into)
+        discoglog_entries[["scrapedate"]] = discoglog_entries[["scrapedate"]].apply(pd.to_datetime)
+
+        db_insert_into(discoglog_entries.iloc[index:index+1], 'discoglog', rds_engine)
+
         # If no result returned then there is no discography for that band (i.e. no albums)
         if df_raw is None:
             print("Moving on...\n")
         else:
-            # Update discography log
-            print("Updating scrape log...")
-            # Set the scrape as the current time (not 100% accurate but close enough...)
-            irl_time = datetime.datetime.now(ireland)
-            discoglog_entries.loc[index, 'scrapedate'] = irl_time
-            # For some reason the scrapedate series is stored in discoglog_entries as an object, not a datetime:
-            # this causes issues when inserting into DB (see db_insert_into)
-            discoglog_entries[["scrapedate"]] = discoglog_entries[["scrapedate"]].apply(pd.to_datetime)
-
-            db_insert_into(discoglog_entries.iloc[index:index+1], 'discoglog', rds_engine)
-
-            # Get the last entry of the discography log, so we can take the scrape ID
+            # Get the last entry of the discography log at this loop iteration,
+            # so we can take the current scrape ID
             last_entry = pd.read_sql(discoglog_qu, rds_engine)
 
             # Currently there is no additional 'tidy' step; all is done in the
