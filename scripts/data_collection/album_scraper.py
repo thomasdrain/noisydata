@@ -37,10 +37,23 @@ rds_engine = db_connect()
 band_id_qu = """
 SELECT DISTINCT BandID
 FROM BAND
-WHERE BandID NOT IN (
+WHERE 
+BandID NOT IN (
     SELECT BandID 
     FROM DISCOGLOG 
     WHERE BandID IS NOT NULL
+) AND
+BandID IN (
+    SELECT r.BandID
+    FROM Review r
+    INNER JOIN (
+        SELECT BandID, COUNT(DISTINCT LOWER(ReviewLink)) as Num_Reviews
+        FROM REVIEW
+        WHERE BandID IS NOT NULL
+        GROUP BY BandID
+    ) c
+    ON r.BandID = c.BandID AND
+    c.Num_Reviews >= 1   
 )
 """
 
@@ -56,7 +69,8 @@ discoglog_entries = pd.DataFrame({'bandid': bands,
                                   'scrapedate': None})
 
 # The most recent discography scrapes (i.e. the last time
-# the albums were scraped from each band)
+# the albums were scraped from each band).
+# This query gets run for each discography, so we know what the ID should be
 discoglog_qu = """
 SELECT t1.Discog_ScrapeID
 FROM DISCOGLOG t1
@@ -70,8 +84,8 @@ on t1.ScrapeDate = t2.max_date
 try:
     for index, this_scrape in discoglog_entries.iterrows():
 
-        print('*** Scraping albums for band #', index, 'of ',
-              len(discoglog_entries), ' (band ID', this_scrape['bandid'], ')', sep="")
+        print('*** Scraping albums for band #', index, ' of ',
+              len(discoglog_entries), ' (band ID ', this_scrape['bandid'], ')', sep="")
 
         # Scrape albums
         df_raw = get_discog(this_scrape['bandid'])
