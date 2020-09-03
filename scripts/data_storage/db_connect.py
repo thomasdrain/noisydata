@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 import os
 
 # Update character encoding for Oracle
-os.environ['NLS_LANG'] = 'AMERICAN_AMERICA.AL32UTF8'
+#os.environ['NLS_LANG'] = 'AMERICAN_AMERICA.AL32UTF8'
 
 
 def db_connect():
