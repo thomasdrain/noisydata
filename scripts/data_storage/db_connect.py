@@ -2,9 +2,6 @@ import json
 from sqlalchemy import create_engine
 import os
 
-# Update character encoding for Oracle
-#os.environ['NLS_LANG'] = 'AMERICAN_AMERICA.AL32UTF8'
-
 
 def db_connect():
     dir_name = os.path.dirname(__file__)
@@ -15,7 +12,7 @@ def db_connect():
     with open(filename) as json_data_file:
         data = json.load(json_data_file)['sql']
 
-    connection_string = 'oracle+cx_oracle://{username}:{password}@{hostname}:{port}/{database}'
+    connection_string = 'mssql+pyodbc://{username}:{password}@{hostname}:{port}/{database}?driver=SQL+Server+Native+Client+11.0'
 
     # create engine to connect to RDS
     print('Connecting to DB...')
@@ -25,7 +22,7 @@ def db_connect():
             password=data['passwd'],
             hostname=data['host'],
             port=data['port'],
-            database=data['sid'],
+            database=data['db']
         )
     )
     print('Connected!\n')
