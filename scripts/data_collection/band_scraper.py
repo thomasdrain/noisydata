@@ -12,7 +12,7 @@
 
 import datetime
 import pandas as pd
-import pytz
+import pytz.timzone as timezone
 import sys
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
@@ -37,7 +37,7 @@ rds_engine = db_connect()
 letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 
 # Need this for calculating scrape datetimes
-ireland = pytz.timezone('Europe/Dublin')
+ireland = timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
 bandlog_entries = pd.DataFrame({'letter': letters,
