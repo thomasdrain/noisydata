@@ -12,7 +12,7 @@
 
 import datetime
 import pandas as pd
-import pytz.timzone as timezone
+import pytz
 import sys
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
@@ -26,9 +26,8 @@ sys.path.insert(1, 'scripts/')
 response_len = 500
 
 # Column names I'm assigning, based on what the raw data has in it
-# Note: keeping the names as lower case to be treated as case insensitive in Oracle,
-# see https://docs.sqlalchemy.org/en/13/dialects/oracle.html
-raw_data_fields = ['link', 'country', 'genre', 'status']
+# Keeping these the same as the columns in the database
+raw_data_fields = ['BandLink', 'Country', 'Genre', 'BandStatus']
 
 # Connect to RDS
 rds_engine = db_connect()
@@ -37,11 +36,11 @@ rds_engine = db_connect()
 letters = 'NBR ~ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z'.split()
 
 # Need this for calculating scrape datetimes
-ireland = timezone('Europe/Dublin')
+ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
-bandlog_entries = pd.DataFrame({'letter': letters,
-                                'scrapedate': None})
+bandlog_entries = pd.DataFrame({'Letter': letters,
+                                'ScrapeDate': None})
 
 bandlog_qu = """
 SELECT t1.Band_ScrapeID
@@ -56,7 +55,7 @@ on t1.ScrapeDate = t2.max_date
 try:
     for index, this_scrape in bandlog_entries.iterrows():
         # Scrape bands
-        df_raw = scrape_metalarchives(item=this_scrape['letter'],
+        df_raw = scrape_metalarchives(item=this_scrape['Letter'],
                                       get_func=get_band,
                                       col_names=raw_data_fields,
                                       response_len=response_len)
@@ -65,10 +64,10 @@ try:
         print("Updating scrape log...")
         # Set the scrape as the current time (not 100% accurate but close enough...)
         irl_time = datetime.datetime.now(ireland)
-        bandlog_entries.loc[index, 'scrapedate'] = irl_time
-        # For some reason the scrapedate series is stored in bandlog_entries as an object, not a datetime:
+        bandlog_entries.loc[index, 'ScrapeDate'] = irl_time
+        # For some reason the ScrapeDate series is stored in bandlog_entries as an object, not a datetime:
         # this causes issues when inserting into DB (see db_insert_into)
-        bandlog_entries[["scrapedate"]] = bandlog_entries[["scrapedate"]].apply(pd.to_datetime)
+        # bandlog_entries[["ScrapeDate"]] = bandlog_entries[["ScrapeDate"]].apply(pd.to_datetime)
 
         db_insert_into(bandlog_entries.iloc[index:index+1], 'bandlog', rds_engine)
 
@@ -77,8 +76,8 @@ try:
 
         # Tidy up the raw scraped output
         print("Tidying output...")
-        df_clean = tidy_band(df_raw, letter=this_scrape['letter'])
-        df_clean.loc[:, 'band_scrapeid'] = last_entry.loc[0, 'band_scrapeid']
+        df_clean = tidy_band(df_raw, letter=this_scrape['Letter'])
+        df_clean.loc[:, 'Band_ScrapeID'] = last_entry.loc[0, 'Band_ScrapeID']
 
         # Write to RDS
         print("Inserting into database...\n")
