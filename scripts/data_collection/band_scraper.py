@@ -65,9 +65,6 @@ try:
         # Set the scrape as the current time (not 100% accurate but close enough...)
         irl_time = datetime.datetime.now(ireland)
         bandlog_entries.loc[index, 'ScrapeDate'] = irl_time
-        # For some reason the ScrapeDate series is stored in bandlog_entries as an object, not a datetime:
-        # this causes issues when inserting into DB (see db_insert_into)
-        # bandlog_entries[["ScrapeDate"]] = bandlog_entries[["ScrapeDate"]].apply(pd.to_datetime)
 
         db_insert_into(bandlog_entries.iloc[index:index+1], 'bandlog', rds_engine)
 
@@ -76,7 +73,7 @@ try:
 
         # Tidy up the raw scraped output
         print("Tidying output...")
-        df_clean = tidy_band(df_raw, letter=this_scrape['Letter'])
+        df_clean = tidy_band(df_raw)
         df_clean.loc[:, 'Band_ScrapeID'] = last_entry.loc[0, 'Band_ScrapeID']
 
         # Write to RDS

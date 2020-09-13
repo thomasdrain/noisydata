@@ -6,6 +6,5 @@ create table metalarchives.dbo.Review (
     ReviewDate			DATE,
     ReviewLink          VARCHAR(1000),
     ReviewScore         INT,
-    Genre				VARCHAR(1000),
-    Review_ScrapeID		BIGINT
+	Review_ScrapeID		BIGINT
 );

@@ -32,17 +32,16 @@ response_len = 200
 rds_engine = db_connect()
 
 # Column names I'm assigning, based on what the raw data has in it
-# Note: keeping the names as lower case to be treated as case insensitive in Oracle,
-# see https://docs.sqlalchemy.org/en/13/dialects/oracle.html
-raw_data_fields = ['date', 'reviewlink_html', 'bandlink_html', 'albumlink_html',
-                    'score', 'userlink_html', 'time']
+# Keeping these the same as the columns in the database
+raw_data_fields = ['ReviewDate', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
+                    'ReviewScore', 'UserLink_html', 'ReviewTime']
 
 # Need this for calculating scrape datetimes
 ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
-reviewlog_entries = pd.DataFrame({'month': months,
-                                  'scrapedate': None})
+reviewlog_entries = pd.DataFrame({'ReviewMonth': months,
+                                  'ScrapeDate': None})
 
 reviewlog_qu = """
 SELECT t1.Review_ScrapeID
@@ -57,7 +56,7 @@ on t1.ScrapeDate = t2.max_date
 try:
     for index, this_scrape in reviewlog_entries.iterrows():
         # Scrape reviews
-        df_raw = scrape_metalarchives(item=this_scrape['month'],
+        df_raw = scrape_metalarchives(item=this_scrape['ReviewMonth'],
                                       get_func=get_review,
                                       col_names=raw_data_fields,
                                       response_len=response_len)
@@ -65,11 +64,7 @@ try:
         print("Updating scrape log...")
         # Set the scrape as the current time (not 100% accurate but close enough...)
         irl_time = datetime.datetime.now(ireland)
-        reviewlog_entries.loc[index, 'scrapedate'] = irl_time
-
-        # For some reason the scrapedate series is stored in reviewlog_entries as an object, not a datetime:
-        # this causes issues when inserting into DB (see db_insert_into)
-        reviewlog_entries[["scrapedate"]] = reviewlog_entries[["scrapedate"]].apply(pd.to_datetime)
+        reviewlog_entries.loc[index, 'ScrapeDate'] = irl_time
 
         # Insert the new log entry
         db_insert_into(reviewlog_entries.iloc[index:index+1], 'reviewlog', rds_engine)
@@ -79,8 +74,8 @@ try:
 
         # Tidy up the raw scraped output
         print("Tidying output...")
-        df_clean = tidy_review(df_raw, month=this_scrape['month'])
-        df_clean.loc[:, 'review_scrapeid'] = last_entry.loc[0, 'review_scrapeid']
+        df_clean = tidy_review(df_raw, month=this_scrape['ReviewMonth'])
+        df_clean.loc[:, 'Review_ScrapeID'] = last_entry.loc[0, 'Review_ScrapeID']
 
         # Write to RDS
         print("Inserting into database...\n")
