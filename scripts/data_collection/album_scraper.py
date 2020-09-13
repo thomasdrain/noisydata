@@ -25,7 +25,7 @@ sys.path.insert(1, 'scripts/')
 # Column names I'm assigning, based on what the raw data has in it
 # Note: keeping the names as lower case to be treated as case insensitive in Oracle,
 # see https://docs.sqlalchemy.org/en/13/dialects/oracle.html
-raw_data_fields = ['bandid', 'albumname', 'albumtype', 'albumyear', 'reviews', 'rating']
+raw_data_fields = ['BandID', 'AlbumName', 'AlbumType', 'AlbumYear', 'Reviews', 'Rating']
 
 # Connect to RDS
 rds_engine = db_connect()
@@ -59,14 +59,14 @@ BandID IN (
 
 print("Querying full list of bands...")
 bands_df = pd.read_sql(band_id_qu, rds_engine)
-bands = bands_df.loc[:, "bandid"]
+bands = bands_df.loc[:, 'BandID']
 
 # Need this for calculating scrape datetimes
 ireland = pytz.timezone('Europe/Dublin')
 
 # Store these so we can batch update at the end
-discoglog_entries = pd.DataFrame({'bandid': bands,
-                                  'scrapedate': None})
+discoglog_entries = pd.DataFrame({'BandID': bands,
+                                  'ScrapeDate': None})
 
 # The most recent discography scrapes (i.e. the last time
 # the albums were scraped from each band).
@@ -85,20 +85,17 @@ try:
     for index, this_scrape in discoglog_entries.iterrows():
 
         print('*** Scraping albums for band #', index, ' of ',
-              len(discoglog_entries), ' (band ID ', this_scrape['bandid'], ')', sep="")
+              len(discoglog_entries), ' (band ID ', this_scrape['BandID'], ')', sep="")
 
         # Scrape albums
-        df_raw = get_discog(this_scrape['bandid'])
+        df_raw = get_discog(this_scrape['BandID'])
 
         # Update discography log
         print("Updating scrape log...")
         # Set the scrape as the current time (not 100% accurate but close enough...)
         irl_time = datetime.datetime.now(ireland)
-        discoglog_entries.loc[index, 'scrapedate'] = irl_time
-        # For some reason the scrapedate series is stored in discoglog_entries as an object, not a datetime:
-        # this causes issues when inserting into DB (see db_insert_into)
-        discoglog_entries[["scrapedate"]] = discoglog_entries[["scrapedate"]].apply(pd.to_datetime)
-
+        discoglog_entries.loc[index, 'ScrapeDate'] = irl_time
+        
         db_insert_into(discoglog_entries.iloc[index:index+1], 'discoglog', rds_engine)
 
         # If no result returned then there is no discography for that band (i.e. no albums)
@@ -112,7 +109,7 @@ try:
             # Currently there is no additional 'tidy' step; all is done in the
             # get_discog() as it's a fairly easy manipulation
             df_clean = df_raw
-            df_clean.loc[:, 'discog_scrapeid'] = last_entry.loc[0, 'discog_scrapeid']
+            df_clean.loc[:, 'Discog_ScrapeID'] = last_entry.loc[0, 'Discog_ScrapeID']
 
             # Write to RDS
             print("Inserting into database...\n")

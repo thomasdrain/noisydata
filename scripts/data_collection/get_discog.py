@@ -35,9 +35,9 @@ def get_discog(band):
 
     else:
         # Note: the order of these columns is important - watch the integer indexing below
-        clean_dat = pd.DataFrame(data='', columns=['bandid', 'albumlink', 'albumid',
-                                                   'albumname', 'albumtype', 'albumyear',
-                                                   'reviews', 'rating'],
+        clean_dat = pd.DataFrame(data='', columns=['BandID', 'AlbumLink', 'AlbumID',
+                                                   'AlbumName', 'AlbumType', 'AlbumYear',
+                                                   'Reviews', 'Rating'],
                                  index=range(0, len(albums) - 1))
 
         # Set the band ID for these albums
@@ -66,24 +66,28 @@ def get_discog(band):
             # If there's at least one review, the <td> will have the form '2 (67%)',
             # which denote the number of reviews and average rating.
             # Extract these into their own columns.
-            tmp_review_col = clean_dat.loc[album_counter, 'reviews']
+            tmp_review_col = clean_dat.loc[album_counter, 'Reviews']
             if tmp_review_col != '':
                 # review count (the first set of digits before the space)
                 review_count = re.sub("(\\d+) \\(\\d+%\\)*$", "\\1", tmp_review_col)
-                clean_dat.loc[album_counter, 'reviews'] = review_count
+                clean_dat.loc[album_counter, 'Reviews'] = review_count
 
                 # the rating (a number followed by a percentage sign)
                 tmp_rating_col = re.sub("\\d+ \\((\\d+)%\\)*$", "\\1", tmp_review_col)
                 rating = re.sub("(\\d+)%$", "\\1", tmp_rating_col)  # remove the % sign
-                clean_dat.loc[album_counter, 'rating'] = rating
+
+                if review_count == 0:
+                    clean_dat.loc[album_counter, 'Rating'] = None
+                else:
+                    clean_dat.loc[album_counter, 'Rating'] = rating
 
             album_counter += 1
 
         # This will be filled in in the main script
-        clean_dat['discog_scrapeid'] = None
+        clean_dat.loc[:, 'Discog_ScrapeID'] = None
         clean_dat.reset_index(drop=True, inplace=True)
 
-        res = clean_dat[['bandid', 'albumid', 'albumname',
-                         'albumtype', 'albumyear', 'reviews',
-                         'rating', 'albumlink', 'discog_scrapeid']]
+        res = clean_dat[['BandID', 'AlbumID', 'AlbumName',
+                         'AlbumType', 'AlbumYear', 'Reviews',
+                         'Rating', 'AlbumLink', 'Discog_ScrapeID']]
         return res
