@@ -1,7 +1,7 @@
 #!venv/bin/python
 
 # Author: Thomas Drain
-# Year: 2019
+# Year: 2020
 
 # Script for scraping albums from metal-archives.com
 
@@ -33,28 +33,23 @@ rds_engine = db_connect()
 # All the band IDs we have on record that have not already been scraped.
 # We'll search for albums for each of these bands.
 # Note: there are around 134,000 bands so all up this is almost 5 days of scraping!
-
 band_id_qu = """
-SELECT DISTINCT BandID
-FROM BAND
+SELECT DISTINCT b.BandID, r.Num_Reviews
+FROM BAND b 
+LEFT JOIN (
+    SELECT BandID, COUNT(DISTINCT LOWER(ReviewLink)) as Num_Reviews
+    FROM REVIEW
+    WHERE BandID IS NOT NULL
+    GROUP BY BandID
+) r
+ON b.BandID = r.BandID
 WHERE 
-BandID NOT IN (
+b.BandID NOT IN (
     SELECT BandID 
     FROM DISCOGLOG 
     WHERE BandID IS NOT NULL
-) AND
-BandID IN (
-    SELECT r.BandID
-    FROM Review r
-    INNER JOIN (
-        SELECT BandID, COUNT(DISTINCT LOWER(ReviewLink)) as Num_Reviews
-        FROM REVIEW
-        WHERE BandID IS NOT NULL
-        GROUP BY BandID
-    ) c
-    ON r.BandID = c.BandID AND
-    c.Num_Reviews >= 1   
 )
+ORDER BY r.Num_Reviews desc
 """
 
 print("Querying full list of bands...")
