@@ -12,7 +12,8 @@ def db_connect():
     with open(filename) as json_data_file:
         data = json.load(json_data_file)['sql']
 
-    connection_string = 'mssql+pyodbc://{username}:{password}@{hostname}:{port}/{database}?driver=SQL+Server+Native+Client+11.0'
+    connection_string = 'mssql+pyodbc://{username}:{password}@{hostname}:{port}/{database}?' \
+                        'driver=ODBC+Driver+17+for+SQL+Server'
 
     # create engine to connect to RDS
     print('Connecting to DB...')
