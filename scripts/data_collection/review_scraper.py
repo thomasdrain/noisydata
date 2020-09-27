@@ -79,8 +79,9 @@ try:
 
         # Write to RDS
         print("Inserting into database...\n")
-        db_insert_into(new_rows=df_clean, table='review', engine=rds_engine,
-                       local='../../data/REVIEW_{}.csv'.format(irl_time.strftime('%Y-%m-%d')))
+        db_insert_into(new_rows=df_clean, table='review', engine=rds_engine
+                       #, local='../../data/REVIEW_{}.csv'.format(irl_time.strftime('%Y-%m-%d'))
+        )
 
 finally:
     # Close connection

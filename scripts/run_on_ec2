@@ -2,5 +2,6 @@ cd noisydata/
 source venv/bin/activate
 #pip3 install -r requirements.txt
 #python3 scripts/data_collection/band_scraper.py
-nohup python3 scripts/data_collection/review_scraper.py &
+cd scripts/
+nohup python3 -m data_collection.review_scraper.py &
 deactivate

@@ -13,14 +13,10 @@
 import datetime
 import pandas as pd
 import pytz
-import sys
 import time
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_discog import get_discog
-
-# This is important when running over EC2, to add this path into the workpath
-sys.path.insert(1, 'scripts/')
 
 # Column names I'm assigning, based on what the raw data has in it
 # Note: keeping the names as lower case to be treated as case insensitive in Oracle,
@@ -108,8 +104,9 @@ try:
 
             # Write to RDS
             print("Inserting into database...\n")
-            db_insert_into(new_rows=df_clean, table='album', engine=rds_engine,
-                           local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d')))
+            db_insert_into(new_rows=df_clean, table='album', engine=rds_engine
+                           #, local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d'))
+                           )
         time.sleep(2)
 finally:
     # Close connection

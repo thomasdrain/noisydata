@@ -12,6 +12,7 @@ def db_connect():
     with open(filename) as json_data_file:
         data = json.load(json_data_file)['sql']
 
+    # Update me to move driver hardcoding to the config file
     connection_string = 'mssql+pyodbc://{username}:{password}@{hostname}:{port}/{database}?' \
                         'driver=ODBC+Driver+17+for+SQL+Server'
 
