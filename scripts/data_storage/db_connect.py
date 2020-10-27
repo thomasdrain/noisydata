@@ -1,4 +1,5 @@
 import json
+import pyodbc
 from sqlalchemy import create_engine
 import os
 
@@ -14,7 +15,9 @@ def db_connect():
 
     # Update me to move driver hardcoding to the config file
     connection_string = 'mssql+pyodbc://{username}:{password}@{hostname}:{port}/{database}?' \
-                        'driver=ODBC+Driver+17+for+SQL+Server'
+                        'driver={driver}'
+
+    driver = pyodbc.drivers()[0]
 
     # create engine to connect to RDS
     print('Connecting to DB...')
@@ -24,7 +27,8 @@ def db_connect():
             password=data['passwd'],
             hostname=data['host'],
             port=data['port'],
-            database=data['db']
+            database=data['db'],
+            driver=driver
         )
     )
     print('Connected!\n')
