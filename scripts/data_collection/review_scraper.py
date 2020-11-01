@@ -12,8 +12,6 @@
 import datetime
 import pandas as pd
 import pytz
-import sys
-import time
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_review import get_review
@@ -23,6 +21,17 @@ from data_collection.tidy_review import tidy_review
 
 # Sequence of months we're going to scrape
 # Note: valid dates for review by-date listing are in YYYY-MM format
+# max_review_date = .........
+# start_date = ifnull(max_review_date, '2002-07')
+
+# today_month = datetime.date.today().strftime("%Y-%m")
+# delta = datetime.timedelta(days=20)
+# end_date = today_month - delta
+# if start_date >= end_date:
+#   finish
+# else:
+
+
 end_month = '2020-01'
 months = pd.date_range(start='2002-07', end=end_month, freq='M').map(lambda x: x.strftime('%Y-%m'))
 

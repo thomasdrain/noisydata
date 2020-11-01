@@ -1,3 +1,3 @@
-source venv/bin/activate
+. venv/bin/activate
 python3 -m data_collection.band_scraper.py
 deactivate
