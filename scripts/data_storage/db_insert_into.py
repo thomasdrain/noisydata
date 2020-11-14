@@ -21,4 +21,4 @@ def db_insert_into(new_rows, table, engine, operation='append', local=''):
             new_rows.to_csv(local, mode='a', header=False)
 
     if table != '':
-        new_rows.to_sql(table, con=engine, if_exists=operation, index=False, chunksize=10000)#, dtype=new_data_types)
+        new_rows.to_sql(table, con=engine, if_exists=operation, index=False, chunksize=1000)#, dtype=new_data_types)
