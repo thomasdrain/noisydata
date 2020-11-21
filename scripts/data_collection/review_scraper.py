@@ -12,33 +12,36 @@
 import datetime
 import pandas as pd
 import pytz
+import time
 from data_storage.db_connect import db_connect
 from data_storage.db_insert_into import db_insert_into
 from data_collection.get_review import get_review
 from data_collection.scrape_metalarchives import scrape_metalarchives
 from data_collection.tidy_review import tidy_review
 
-
-# Sequence of months we're going to scrape
-# Note: valid dates for review by-date listing are in YYYY-MM format
-# max_review_date = .........
-# start_date = ifnull(max_review_date, '2002-07')
-
-# today_month = datetime.date.today().strftime("%Y-%m")
-# delta = datetime.timedelta(days=20)
-# end_date = today_month - delta
-# if start_date >= end_date:
-#   finish
-# else:
-
-
-end_month = '2020-01'
-months = pd.date_range(start='2002-07', end=end_month, freq='M').map(lambda x: x.strftime('%Y-%m'))
-
 response_len = 200
 
 # Connect to RDS
 rds_engine = db_connect()
+
+# Get the max review date on the DB
+month_range_sql = """
+SELECT 
+    -- The month of our latest review on the table (we'll scrape this again next month, 
+    -- but just to be sure we haven't missed any reviews). 
+    FORMAT(ISNULL(MAX(ReviewDate), '01-AUG-2002'), 'yyyy-MM') START_DATE
+    -- The previous month (relative to today)
+    , FORMAT(DATEADD(month, -1, SYSDATETIME()), 'yyyy-MM') END_DATE
+FROM Review
+"""
+
+month_ranges = pd.read_sql(month_range_sql, rds_engine)
+start_date = month_ranges.loc[:, 'START_DATE'].values[0]
+end_date = month_ranges.loc[:, 'END_DATE'].values[0]
+
+# Sequence of months we're going to scrape
+# Note: valid dates for review by-date listing are in YYYY-MM format
+months = pd.date_range(start=start_date, end=end_date, freq='M').map(lambda x: x.strftime('%Y-%m'))
 
 # Column names I'm assigning, based on what the raw data has in it
 # Keeping these the same as the columns in the database
@@ -90,7 +93,9 @@ try:
         print("Inserting into database...\n")
         db_insert_into(new_rows=df_clean, table='review', engine=rds_engine
                        #, local='../../data/REVIEW_{}.csv'.format(irl_time.strftime('%Y-%m-%d'))
-        )
+                       )
+        # This job is quite large, particularly when running it the first time
+        time.sleep(60)
 
 finally:
     # Close connection
