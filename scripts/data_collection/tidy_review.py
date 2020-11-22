@@ -74,6 +74,8 @@ def tidy_review(raw_dat, month):
     # raw_dat['bandid'] = [int(re.sub("^.+/(\\d+)$", "\\1", b)) for b in band_links]
     for n, b in enumerate(band_links):
         try:
+            # This is the only current issue I've found; a couple of reviews have no band ID in the url
+            # because they've been deleted.
             raw_dat.loc[n, 'BandID'] = int(re.sub("^.+/(\\d+)$", "\\1", b))
         except Exception as e:
             print("Exception (no band ID? Try searching the raw data for '/\' where the ID is missing/deleted): ")
@@ -92,10 +94,14 @@ def tidy_review(raw_dat, month):
     # This will be filled in in the main script
     raw_dat.loc[:, 'Review_ScrapeID'] = None
     
+    # Currently all we're filtering out are the one or two null band IDs
+    # which seem to correspond to reviews deleted but still appearing in the JSON
+    filter_rows = raw_dat['BandID'].notnull()
+
     # Return final dataset
-    tidy_dat = raw_dat.loc[:, ['BandID', 'AlbumID', 'Username',
-                            'ReviewDate', 'ReviewLink', 'ReviewScore',
-                            'Review_ScrapeID']]
+    tidy_dat = raw_dat.loc[filter_rows,
+                           ['BandID', 'AlbumID', 'Username', 'ReviewDate',
+                            'ReviewLink', 'ReviewScore', 'Review_ScrapeID']]
     # Current index corresponds to index in smaller chunks concatenated
     # Reset index to start at 0 and end at number of bands
     tidy_dat.index = range(len(tidy_dat))
