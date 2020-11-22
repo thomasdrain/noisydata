@@ -46,7 +46,7 @@ months = pd.date_range(start=start_date, end=end_date, freq='M').map(lambda x: x
 # Column names I'm assigning, based on what the raw data has in it
 # Keeping these the same as the columns in the database
 raw_data_fields = ['ReviewDate', 'ReviewLink_html', 'BandLink_html', 'AlbumLink_html',
-                    'ReviewScore', 'UserLink_html', 'ReviewTime']
+                   'ReviewScore', 'UserLink_html', 'ReviewTime']
 
 # Need this for calculating scrape datetimes
 ireland = pytz.timezone('Europe/Dublin')
@@ -94,7 +94,7 @@ try:
         db_insert_into(new_rows=df_clean, table='review', engine=rds_engine
                        #, local='../../data/REVIEW_{}.csv'.format(irl_time.strftime('%Y-%m-%d'))
                        )
-        # This job is quite large, particularly when running it the first time
+        # This job is quite large, particularly when running it the first time, so sleep a bit after each month
         time.sleep(60)
 
 finally:
