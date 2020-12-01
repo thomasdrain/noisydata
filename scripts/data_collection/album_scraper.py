@@ -120,7 +120,7 @@ try:
             db_insert_into(new_rows=df_clean, table='album', engine=rds_engine
                            #, local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d'))
                            )
-        #time.sleep(2)
+        time.sleep(2)
 
 finally:
     # Close connection
