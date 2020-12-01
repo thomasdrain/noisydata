@@ -76,17 +76,17 @@ try:
     for index, this_scrape in discoglog_entries.iterrows():
 
         if index > 0:
-            # Wait 5 mins every 1000 scrapes
-            if index % 1000 == 0:
-                time.sleep(300)
+            # Wait 60 mins every 50,000 scrapes
+            if index % 50000 == 0:
+                time.sleep(3600)
 
             # Wait 20 mins every 10,000 scrapes
             elif index % 10000 == 0:
                 time.sleep(1200)
 
-            # Wait 60 mins every 50,000 scrapes
-            elif index % 50000 == 0:
-                time.sleep(3600)
+            # Wait 5 mins every 1000 scrapes
+            elif index % 1000 == 0:
+                time.sleep(300)
 
         print('*** Scraping albums for band #', index, ' of ',
               len(discoglog_entries), ' (band ID ', this_scrape['BandID'], ')', sep="")
