@@ -75,6 +75,19 @@ on t1.ScrapeDate = t2.max_date
 try:
     for index, this_scrape in discoglog_entries.iterrows():
 
+        if index > 0:
+            # Wait 5 mins every 1000 scrapes
+            if index % 1000 == 0:
+                time.sleep(300)
+
+            # Wait 20 mins every 10,000 scrapes
+            elif index % 10000 == 0:
+                time.sleep(1200)
+
+            # Wait 60 mins every 50,000 scrapes
+            elif index % 50000 == 0:
+                time.sleep(3600)
+
         print('*** Scraping albums for band #', index, ' of ',
               len(discoglog_entries), ' (band ID ', this_scrape['BandID'], ')', sep="")
 
@@ -107,7 +120,8 @@ try:
             db_insert_into(new_rows=df_clean, table='album', engine=rds_engine
                            #, local='../../data/ALBUM_{}.csv'.format(irl_time.strftime('%Y-%m-%d'))
                            )
-        time.sleep(2)
+        #time.sleep(2)
+
 finally:
     # Close connection
     rds_engine.dispose()
