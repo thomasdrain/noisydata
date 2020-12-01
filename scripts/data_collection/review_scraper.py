@@ -30,8 +30,8 @@ SELECT
     -- The month of our latest review on the table (we'll scrape this again next month, 
     -- but just to be sure we haven't missed any reviews). 
     FORMAT(ISNULL(MAX(ReviewDate), '01-AUG-2002'), 'yyyy-MM') START_DATE
-    -- The previous month (relative to today)
-    , FORMAT(DATEADD(month, -1, SYSDATETIME()), 'yyyy-MM') END_DATE
+    -- The previous month (relative to today - range is non-inclusive)
+    , FORMAT(SYSDATETIME(), 'yyyy-MM') END_DATE
 FROM Review
 """
 
