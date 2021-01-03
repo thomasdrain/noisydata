@@ -6,6 +6,7 @@ venv/
 
 # Ignore these files:
 config.*
+scripts/analysis/db_connect.R
 
 *.csv
 */*.csv
@@ -17,3 +18,4 @@ config.*
 */*.pyc
 */*/*.pyc
 */*/*/*.pyc
+.Rproj.user
