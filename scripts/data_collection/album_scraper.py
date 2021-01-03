@@ -59,6 +59,8 @@ ireland = pytz.timezone('Europe/Dublin')
 discoglog_entries = pd.DataFrame({'BandID': bands,
                                   'ScrapeDate': None})
 
+print("There are ", len(discoglog_entries), " bands to scrape today.", sep="")
+
 # The most recent discography scrapes (i.e. the last time
 # the albums were scraped from each band).
 # This query gets run for each discography, so we know what the ID should be
