@@ -18,4 +18,7 @@ scripts/analysis/db_connect.R
 */*.pyc
 */*/*.pyc
 */*/*/*.pyc
+
 .Rproj.user
+.Rhistory
+.Rprofile
